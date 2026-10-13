@@ -1,0 +1,34 @@
+# Rust
+/target
+**/target
+*.rs.bk
+
+# Node
+node_modules/
+dist/
+.vite/
+*.log
+
+# Tauri
+desktop/src-tauri/gen/
+desktop/src-tauri/target/
+desktop/src-tauri/.tauri/
+
+# Android
+desktop/src-tauri/gen/android/.gradle/
+desktop/src-tauri/gen/android/app/build/
+desktop/src-tauri/gen/android/build/
+desktop/src-tauri/gen/android/local.properties
+
+# Data / artifacts
+/output/
+/data/*.db
+*.db
+*.db-journal
+*.sqlite
+
+# IDE
+.idea/
+.vscode/
+*.swp
+.DS_Store

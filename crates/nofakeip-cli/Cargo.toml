@@ -1,0 +1,23 @@
+[package]
+name = "nofakeip-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "NoFakeIP 命令行工具"
+
+[[bin]]
+name = "nofakeip"
+path = "src/main.rs"
+
+[dependencies]
+nofakeip-core.workspace = true
+tokio.workspace = true
+clap.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+chrono.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+csv.workspace = true

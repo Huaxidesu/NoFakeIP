@@ -1,0 +1,85 @@
+[workspace]
+resolver = "2"
+members = ["crates/nofakeip-core", "crates/nofakeip-cli"]
+exclude = ["desktop/src-tauri"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.77"
+license = "MIT"
+repository = "https://example.com/nofakeip"
+authors = ["NoFakeIP Contributors"]
+
+[workspace.dependencies]
+nofakeip-core = { path = "crates/nofakeip-core" }
+
+tokio = { version = "1", features = [
+    "rt-multi-thread",
+    "net",
+    "time",
+    "io-util",
+    "macros",
+    "sync",
+    "fs",
+] }
+rustls = { version = "0.23", default-features = false, features = [
+    "ring",
+    "std",
+    "tls12",
+    "logging",
+] }
+tokio-rustls = { version = "0.26", default-features = false, features = [
+    "ring",
+    "tls12",
+    "logging",
+] }
+webpki-roots = "0.26"
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+
+rusqlite = { version = "0.32", features = ["bundled"] }
+csv = "1.3"
+# 纯 Rust 的 DEFLATE 实现：无 C 依赖，Windows / Android 均可直接编译。
+# 用途：构建期压缩内置规则数据（见 crates/nofakeip-core/build.rs）。
+miniz_oxide = "0.8"
+
+thiserror = "2"
+anyhow = "1"
+
+rand = "0.8"
+psl = "2"
+ipnet = { version = "2", features = ["serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+clap = { version = "4", features = ["derive"] }
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = true
+
+# 开发 / 测试 profile 调优（重要，见 doc/11 第 6.2 节）：
+# 本 crate 首次全量编译会产出约 60 MB 的 rlib（serde / rusqlite / tokio 泛型单态化），
+# 代码生成阶段是主要耗时；默认 `debug = 2` 还会再产出数十 MB 的 .pdb，
+# 在开启了实时防护的 Windows 上会让编译时间成倍增长（实测单次全量 > 15 分钟）。
+# 因此这里：关闭调试信息、关闭增量编译，换取明显更快的构建。
+# 需要调试时临时用 `CARGO_PROFILE_DEV_DEBUG=2 cargo build` 覆盖即可。
+[profile.dev]
+debug = 0
+incremental = false
+
+[profile.test]
+debug = 0
+incremental = false
+
+# 第三方依赖同样不需要 debug 信息
+[profile.dev.package."*"]
+debug = false
+
+[profile.test.package."*"]
+debug = false
