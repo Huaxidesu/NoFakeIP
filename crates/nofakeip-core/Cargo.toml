@@ -1,0 +1,33 @@
+[package]
+name = "nofakeip-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "NoFakeIP core engine: DNS benchmark, domain classifier, pollution detector, config generator"
+
+[dependencies]
+tokio.workspace = true
+rustls.workspace = true
+tokio-rustls.workspace = true
+webpki-roots.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true
+rusqlite.workspace = true
+csv.workspace = true
+miniz_oxide.workspace = true
+thiserror.workspace = true
+rand.workspace = true
+psl.workspace = true
+ipnet.workspace = true
+chrono.workspace = true
+tracing.workspace = true
+
+[build-dependencies]
+# 构建期压缩内置数据（见 build.rs）
+miniz_oxide.workspace = true
+
+[features]
+default = ["bundled-data"]
+bundled-data = []

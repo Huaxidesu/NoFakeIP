@@ -1,0 +1,136 @@
+{
+  "version": 1,
+  "updated_at": "2026-10-14",
+  "servers": [
+    {
+      "name": "阿里 DoH",
+      "protocol": "doh",
+      "address": "https://dns.alidns.com/dns-query",
+      "host": "dns.alidns.com",
+      "bootstrap_ip": "223.5.5.5",
+      "region": "china",
+      "tags": ["cn", "doh", "public"],
+      "remark": "阿里公共 DNS（DoH），国内延迟通常最低",
+      "default_enabled": true
+    },
+    {
+      "name": "DNSPod DoH",
+      "protocol": "doh",
+      "address": "https://doh.pub/dns-query",
+      "host": "doh.pub",
+      "bootstrap_ip": "119.29.29.29",
+      "region": "china",
+      "tags": ["cn", "doh", "public"],
+      "remark": "腾讯 DNSPod 公共 DNS（DoH）",
+      "default_enabled": true
+    },
+    {
+      "name": "阿里 DNS (UDP)",
+      "protocol": "udp",
+      "address": "223.5.5.5:53",
+      "region": "china",
+      "tags": ["cn", "udp", "public"],
+      "remark": "阿里公共 DNS，明文 UDP，延迟最低但无加密",
+      "default_enabled": true
+    },
+    {
+      "name": "DNSPod (UDP)",
+      "protocol": "udp",
+      "address": "119.29.29.29:53",
+      "region": "china",
+      "tags": ["cn", "udp", "public"],
+      "remark": "腾讯 DNSPod，明文 UDP",
+      "default_enabled": true
+    },
+    {
+      "name": "360 DNS",
+      "protocol": "udp",
+      "address": "101.226.4.6:53",
+      "region": "china",
+      "tags": ["cn", "udp", "public"],
+      "remark": "360 安全 DNS",
+      "default_enabled": false
+    },
+    {
+      "name": "114 DNS",
+      "protocol": "udp",
+      "address": "114.114.114.114:53",
+      "region": "china",
+      "tags": ["cn", "udp", "public"],
+      "remark": "114 DNS（南京信风），老牌公共 DNS",
+      "default_enabled": false
+    },
+    {
+      "name": "腾讯 DNS (TCP)",
+      "protocol": "tcp",
+      "address": "119.29.29.29:53",
+      "region": "china",
+      "tags": ["cn", "tcp", "public"],
+      "remark": "DNSPod 明文 TCP，用于验证 TCP 与 UDP 差异",
+      "default_enabled": false
+    },
+
+    {
+      "name": "Cloudflare DoH",
+      "protocol": "doh",
+      "address": "https://cloudflare-dns.com/dns-query",
+      "host": "cloudflare-dns.com",
+      "bootstrap_ip": "1.1.1.1",
+      "region": "global",
+      "tags": ["global", "doh", "no-log"],
+      "remark": "Cloudflare 1.1.1.1（DoH），承诺不记录查询日志",
+      "default_enabled": true
+    },
+    {
+      "name": "Google DoH",
+      "protocol": "doh",
+      "address": "https://dns.google/dns-query",
+      "host": "dns.google",
+      "bootstrap_ip": "8.8.8.8",
+      "region": "global",
+      "tags": ["global", "doh", "public"],
+      "remark": "Google Public DNS（DoH）",
+      "default_enabled": true
+    },
+    {
+      "name": "Quad9 DoH",
+      "protocol": "doh",
+      "address": "https://dns.quad9.net/dns-query",
+      "host": "dns.quad9.net",
+      "bootstrap_ip": "9.9.9.9",
+      "region": "global",
+      "tags": ["global", "doh", "security"],
+      "remark": "Quad9（DoH），带恶意域名拦截",
+      "default_enabled": true
+    },
+    {
+      "name": "NextDNS DoH",
+      "protocol": "doh",
+      "address": "https://dns.nextdns.io/dns-query",
+      "host": "dns.nextdns.io",
+      "region": "global",
+      "tags": ["global", "doh", "custom"],
+      "remark": "NextDNS，需要换成你自己的配置 ID 才能正常使用",
+      "default_enabled": false
+    },
+    {
+      "name": "Cloudflare DoT",
+      "protocol": "dot",
+      "address": "1.1.1.1:853",
+      "host": "cloudflare-dns.com",
+      "region": "global",
+      "tags": ["global", "dot", "no-log"],
+      "remark": "Cloudflare DNS over TLS",
+      "default_enabled": false
+    },
+    {
+      "name": "Google (UDP)",
+      "protocol": "udp",
+      "address": "8.8.8.8:53",
+      "region": "global",
+      "tags": ["global", "udp", "public"],
+      "remark": "Google Public DNS，明文 UDP，国内常被污染，作为对照组",
+      "default_enabled": false
+    }
+  ]
+}
