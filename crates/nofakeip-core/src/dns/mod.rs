@@ -10,6 +10,7 @@ pub mod wire;
 
 pub use server::{ServerRegistry, BuiltinEntry};
 pub use transport::{
-    parse_doh_url, DnsClient, DnsQueryOutcome, DohEndpoint, QueryOptions, QueryTimings,
+    candidate_addrs, parse_doh_url, DnsClient, DnsQueryOutcome, DohEndpoint, QueryOptions,
+    QueryTimings,
 };
 pub use wire::{DnsMessage, Question, RData, Record};

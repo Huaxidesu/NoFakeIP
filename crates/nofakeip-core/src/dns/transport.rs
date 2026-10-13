@@ -123,17 +123,45 @@ impl DnsClient {
                 self.query_tcp(addr, &msg, opts).await
             }
             DnsProtocol::Dot => {
-                let addr = resolve_server_addr(server, DnsProtocol::Dot).await?;
                 let sni = server
                     .host
                     .clone()
                     .unwrap_or_else(|| host_of_address(&server.address));
-                self.query_dot(addr, &sni, &msg, opts).await
+                let addrs = candidate_addrs(server, &sni, DnsProtocol::Dot.default_port()).await;
+                if addrs.is_empty() {
+                    return Err(CoreError::Network(format!("无法解析 DoT 服务器 {}", sni)));
+                }
+                let mut last: Option<CoreError> = None;
+                for addr in addrs {
+                    match self.query_dot(addr, &sni, &msg, opts).await {
+                        Ok(o) => return Ok(o),
+                        Err(e) => {
+                            tracing::debug!("DoT {} ({}) 失败: {}", server.name, addr, e);
+                            last = Some(e);
+                        }
+                    }
+                }
+                Err(last.unwrap_or_else(|| CoreError::Network("DoT 无可用地址".into())))
             }
             DnsProtocol::Doh => {
                 let ep = parse_doh_url(&server.address)?;
-                let addr = resolve_doh_addr(&ep, server).await?;
-                self.query_doh(&ep, addr, &msg, opts).await
+                // 优先用 bootstrap_ip，失败后回退到系统解析结果：
+                // 有些节点的 bootstrap IP 并不提供 HTTPS 服务（实测 doh.pub + 119.29.29.29）。
+                let addrs = candidate_addrs(server, &ep.host, ep.port).await;
+                if addrs.is_empty() {
+                    return Err(CoreError::Network(format!("无法解析 DoH 服务器 {}", ep.host)));
+                }
+                let mut last: Option<CoreError> = None;
+                for addr in addrs {
+                    match self.query_doh(&ep, addr, &msg, opts).await {
+                        Ok(o) => return Ok(o),
+                        Err(e) => {
+                            tracing::debug!("DoH {} ({}) 失败: {}", server.name, addr, e);
+                            last = Some(e);
+                        }
+                    }
+                }
+                Err(last.unwrap_or_else(|| CoreError::Network("DoH 无可用地址".into())))
             }
         }
     }
@@ -494,6 +522,37 @@ pub async fn resolve_doh_addr(ep: &DohEndpoint, server: &DnsServer) -> Result<So
     addrs
         .next()
         .ok_or_else(|| CoreError::Network(format!("{} 无可用地址", ep.host)))
+}
+
+/// 候选连接地址（最多 3 个）：**先 bootstrap_ip，再系统解析**。
+///
+/// 为什么要回退：部分节点的 `bootstrap_ip` 只用于解析、并不提供 HTTPS/DoT 服务
+/// （实测 `doh.pub` + `119.29.29.29` 会 TLS 失败），因此失败后必须能换地址重试。
+/// 反过来，保留 bootstrap 优先是为了应对「本机 DNS 被 Fake-IP 劫持、系统解析不可信」的场景。
+pub async fn candidate_addrs(server: &DnsServer, host: &str, port: u16) -> Vec<SocketAddr> {
+    let mut out: Vec<SocketAddr> = Vec::new();
+
+    if let Some(boot) = server.bootstrap_ip.as_deref() {
+        if let Ok(ip) = boot.parse::<std::net::IpAddr>() {
+            out.push(SocketAddr::new(ip, port));
+        }
+    }
+
+    if let Ok(ip) = host.parse::<std::net::IpAddr>() {
+        let sa = SocketAddr::new(ip, port);
+        if !out.contains(&sa) {
+            out.push(sa);
+        }
+    } else if let Ok(addrs) = tokio::net::lookup_host((host, port)).await {
+        for a in addrs.take(3) {
+            if !out.contains(&a) {
+                out.push(a);
+            }
+        }
+    }
+
+    out.truncate(3);
+    out
 }
 
 struct HttpResponse {
