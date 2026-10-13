@@ -206,7 +206,13 @@ impl DataUpdater {
                             .map(|t| chrono::DateTime::<chrono::Utc>::from(t).to_rfc3339());
                         (true, md.len(), modified, entries)
                     }
-                    Err(_) => (false, 0, None, 0),
+                    Err(_) => {
+                        // 未下载过用户副本：条目数取内置数据，避免显示为 0 造成误解
+                        let entries = BuiltinData::embedded(&s.target_file)
+                            .map(count_entries)
+                            .unwrap_or(0);
+                        (false, 0, None, entries)
+                    }
                 };
                 DataStatus {
                     id: s.id.clone(),

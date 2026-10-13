@@ -389,6 +389,13 @@ fn cmd_bench(
     let results = run_blocking(diagnoser.bench_batch(&domains, &servers, &opts, Some(progress)))??;
     out.progress_done();
 
+    if results.len() < domains.len() {
+        out.warn(&format!(
+            "有 {} 个域名未能完成测速（详见 -v 日志）",
+            domains.len() - results.len()
+        ));
+    }
+
     for r in &results {
         let _ = st.insert_benchmark(r);
         let ips: Vec<String> = r.all_ips().iter().map(|i| i.to_string()).collect();
@@ -682,6 +689,12 @@ fn cmd_data(cli: &Cli, out: &Out, dir: &Path, action: &DataAction) -> Result<u8>
             }
 
             if reports.iter().any(|r| !r.ok) {
+                let failed = reports.iter().filter(|r| !r.ok).count();
+                out.warn(&format!(
+                    "{}/{} 个数据源更新失败（已保留本地原有数据，未做任何破坏性写入）",
+                    failed,
+                    reports.len()
+                ));
                 return Ok(exit::GENERAL);
             }
             Ok(exit::OK)
