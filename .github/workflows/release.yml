@@ -198,6 +198,20 @@ jobs:
         working-directory: desktop
         run: pnpm tauri android build --apk
 
+      # 防止静默产出坏包：历史上出现过 APK 里 .so 为 0 字节的情况（见 doc/11 第 2.8 节）。
+      - name: Verify APK contains the native library
+        working-directory: desktop
+        run: |
+          APK=$(find src-tauri/gen/android/app/build/outputs/apk -name '*.apk' | head -1)
+          echo "APK: $APK"
+          unzip -l "$APK" | grep -E 'lib/|\.so'
+          SIZE=$(unzip -l "$APK" | awk '/lib\// {print $1; exit}')
+          if [ "${SIZE:-0}" -lt 1000000 ]; then
+            echo "::error::APK 里的 .so 只有 ${SIZE} 字节（应为 10 MB 量级）"
+            exit 1
+          fi
+          echo ".so 大小：$SIZE 字节 ✅"
+
       - uses: actions/upload-artifact@v4
         with:
           name: android-apk
