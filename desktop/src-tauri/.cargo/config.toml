@@ -1,0 +1,26 @@
+# Android 交叉编译配置（环境适配补丁 E4，见 doc/11-构建发布与Android.md 第 2.3 节）
+#
+# 为什么需要：Tauri 的 `android build` 会自行设置一部分环境变量，但 rustls 依赖的
+# `ring` 需要通过 CC_<target> / AR_<target> 找到 NDK 的 clang 与 ar；缺失时会报
+# `error: linker 'cc' not found` 或 ring 编译失败。
+#
+# 注意：本文件只声明 Android target 的 linker/ar，对 Windows / Linux 构建无影响。
+
+# NDK 根目录（r27c）。目录名必须是版本号，Gradle 也按此规则查找。
+# D:/Library/DevelopmentKit/AndroidSDK/ndk/27.2.12479018
+
+[target.aarch64-linux-android]
+ar = "D:/Library/DevelopmentKit/AndroidSDK/ndk/27.2.12479018/toolchains/llvm/prebuilt/windows-x86_64/bin/llvm-ar.exe"
+linker = "D:/Library/DevelopmentKit/AndroidSDK/ndk/27.2.12479018/toolchains/llvm/prebuilt/windows-x86_64/bin/aarch64-linux-android24-clang.cmd"
+
+[target.armv7-linux-androideabi]
+ar = "D:/Library/DevelopmentKit/AndroidSDK/ndk/27.2.12479018/toolchains/llvm/prebuilt/windows-x86_64/bin/llvm-ar.exe"
+linker = "D:/Library/DevelopmentKit/AndroidSDK/ndk/27.2.12479018/toolchains/llvm/prebuilt/windows-x86_64/bin/armv7a-linux-androideabi24-clang.cmd"
+
+[target.i686-linux-android]
+ar = "D:/Library/DevelopmentKit/AndroidSDK/ndk/27.2.12479018/toolchains/llvm/prebuilt/windows-x86_64/bin/llvm-ar.exe"
+linker = "D:/Library/DevelopmentKit/AndroidSDK/ndk/27.2.12479018/toolchains/llvm/prebuilt/windows-x86_64/bin/i686-linux-android24-clang.cmd"
+
+[target.x86_64-linux-android]
+ar = "D:/Library/DevelopmentKit/AndroidSDK/ndk/27.2.12479018/toolchains/llvm/prebuilt/windows-x86_64/bin/llvm-ar.exe"
+linker = "D:/Library/DevelopmentKit/AndroidSDK/ndk/27.2.12479018/toolchains/llvm/prebuilt/windows-x86_64/bin/x86_64-linux-android24-clang.cmd"

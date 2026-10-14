@@ -1,0 +1,221 @@
+name: Release
+
+# 多平台发布流水线。
+#
+# 为什么需要它：Linux AppImage 只能在 Linux 上构建（Tauri 依赖 webkit2gtk），
+# 而本机是 Windows 且 Docker 守护进程 / WSL 不可用，因此 Linux 产物由 CI 产出。
+# 打 tag（v*）触发；也可在 Actions 页面手动触发。
+#
+# 产物统一上传到 Release 资产，命名遵循 doc/11-构建发布与Android.md 第 4 节。
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ---------------------------------------------------------------- CLI（三平台）
+  cli:
+    name: CLI · ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact: nofakeip-cli_0.1.0_windows-x64
+            bin: nofakeip.exe
+          - os: ubuntu-22.04
+            artifact: nofakeip-cli_0.1.0_linux-x64
+            bin: nofakeip
+          - os: macos-latest
+            artifact: nofakeip-cli_0.1.0_macos-x64
+            bin: nofakeip
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build
+        run: cargo build --release -p nofakeip-cli
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "target/release/${{ matrix.bin }}" -DestinationPath "${{ matrix.artifact }}.zip"
+
+      - name: Package (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          tar -czf "${{ matrix.artifact }}.tar.gz" -C target/release "${{ matrix.bin }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            ${{ matrix.artifact }}.zip
+            ${{ matrix.artifact }}.tar.gz
+
+  # ------------------------------------------------------------- 桌面端（Win/Linux）
+  desktop:
+    name: Desktop · ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            bundle: nsis
+          - os: ubuntu-22.04
+            bundle: appimage
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: desktop/pnpm-lock.yaml
+
+      # Tauri 在 Linux 上需要这些系统依赖；Ubuntu 22.04 的 glibc 较老，
+      # 产出的 AppImage 向上兼容性更好（不要用 24.04）。
+      - name: Install Linux deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libxdo-dev \
+            libssl-dev \
+            build-essential \
+            curl wget file
+
+      - name: Install frontend deps
+        working-directory: desktop
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        working-directory: desktop
+        run: pnpm tauri build --bundles ${{ matrix.bundle }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.os }}
+          path: |
+            desktop/src-tauri/target/release/bundle/nsis/*.exe
+            desktop/src-tauri/target/release/bundle/appimage/*.AppImage
+          if-no-files-found: ignore
+
+  # --------------------------------------------------------------------- Android
+  android:
+    name: Android · APK
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install NDK
+        run: sdkmanager --install "ndk;27.2.12479018"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: desktop/pnpm-lock.yaml
+
+      - name: Install frontend deps
+        working-directory: desktop
+        run: pnpm install --frozen-lockfile
+
+      # CI 上 dl.google.com 可达，因此不需要 E3 镜像补丁；
+      # 但 gen/android 不入库，必须重新 init。
+      - name: Init Android project
+        working-directory: desktop
+        run: pnpm tauri android init --ci
+
+      # CI runner 上 NDK 路径与本地不同，这里用环境变量覆盖 E4 的 linker 配置。
+      - name: Point cargo at CI NDK
+        working-directory: desktop/src-tauri
+        run: |
+          NDK="$ANDROID_HOME/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          cat > .cargo/config.toml <<EOF
+          [target.aarch64-linux-android]
+          ar = "$NDK/llvm-ar"
+          linker = "$NDK/aarch64-linux-android24-clang"
+          [target.armv7-linux-androideabi]
+          ar = "$NDK/llvm-ar"
+          linker = "$NDK/armv7a-linux-androideabi24-clang"
+          [target.i686-linux-android]
+          ar = "$NDK/llvm-ar"
+          linker = "$NDK/i686-linux-android24-clang"
+          [target.x86_64-linux-android]
+          ar = "$NDK/llvm-ar"
+          linker = "$NDK/x86_64-linux-android24-clang"
+          EOF
+
+      - name: Build APK
+        working-directory: desktop
+        run: pnpm tauri android build --apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: desktop/src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+
+  # ------------------------------------------------------------------- 发布资产
+  release:
+    name: Publish release assets
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [cli, desktop, android]
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+          draft: false
+          generate_release_notes: true
