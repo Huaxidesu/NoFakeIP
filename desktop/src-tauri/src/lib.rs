@@ -14,6 +14,16 @@ use nofakeip_core::dns::ServerRegistry;
 use nofakeip_core::storage::Storage;
 use tauri::Manager;
 
+// 注意：`#[tauri::command]` 生成的 `__cmd__*` 宏是 `#[macro_export]` 的（位于 crate 根），
+// 因此 `generate_handler!` 里必须用**非限定名**，不能用 `commands::foo`。
+// 这里显式 import 一次，既满足宏解析，也让调用点更简洁。
+use commands::{
+    add_server, classify_domain, delete_server, detect_domain, export_servers, generate_report,
+    get_data_dir, get_recommendation, get_settings, get_status, import_servers, list_benchmarks,
+    list_data_sources, list_history, list_servers, run_benchmark, run_full_benchmark,
+    save_text_file, set_server_enabled, set_settings, update_data_sources, update_server,
+};
+
 /// 首次运行时把内置 DNS 节点写入数据库。
 fn seed_builtin(storage: &Storage) -> anyhow::Result<()> {
     if storage.list_servers(false)?.is_empty() {
@@ -48,34 +58,34 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             // 状态与设置
-            commands::get_status,
-            commands::get_recommendation,
-            commands::get_settings,
-            commands::set_settings,
-            commands::get_data_dir,
+            get_status,
+            get_recommendation,
+            get_settings,
+            set_settings,
+            get_data_dir,
             // 测速
-            commands::run_benchmark,
-            commands::run_full_benchmark,
+            run_benchmark,
+            run_full_benchmark,
             // 诊断
-            commands::classify_domain,
-            commands::detect_domain,
+            classify_domain,
+            detect_domain,
             // 报告
-            commands::generate_report,
-            commands::save_text_file,
+            generate_report,
+            save_text_file,
             // 规则数据
-            commands::list_data_sources,
-            commands::update_data_sources,
+            list_data_sources,
+            update_data_sources,
             // DNS 节点
-            commands::list_servers,
-            commands::add_server,
-            commands::update_server,
-            commands::delete_server,
-            commands::set_server_enabled,
-            commands::import_servers,
-            commands::export_servers,
+            list_servers,
+            add_server,
+            update_server,
+            delete_server,
+            set_server_enabled,
+            import_servers,
+            export_servers,
             // 历史
-            commands::list_history,
-            commands::list_benchmarks,
+            list_history,
+            list_benchmarks,
         ])
         .run(tauri::generate_context!())
         .expect("Tauri 应用启动失败");

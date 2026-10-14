@@ -14,12 +14,24 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
+# ⚠️ 必要的工作区修复，请勿删除：
+# tauri-build / tauri-utils 依赖 schemars 0.8，schemars 又依赖 indexmap 1.9。
+# 而 indexmap 1.9.3 的 Cargo.toml **没有 default 特性**（`std = []` 不在 default 中），
+# 其 build.rs 会用 autocfg 探测 sysroot 里是否存在 std；本机（Windows + 安全软件拦截）
+# 该探测失败 → 不会发出 `has_std` → indexmap 编译成「无默认泛型参数」的版本
+# → schemars 的 `IndexMap<K, V>` 报 E0107（需要 3 个泛型参数）。
+# 显式启用 `std` 特性会让 build.rs 直接走 `CARGO_FEATURE_STD` 分支，问题消失。
+# 详见 doc/11-构建发布与Android.md 第 6.3 节。
+indexmap = { version = "1.9", features = ["std"] }
 
 [dependencies]
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 
 nofakeip-core = { path = "../../crates/nofakeip-core" }
+
+# 同 build-dependencies 里的说明：确保 indexmap 1.9 的 `std` 特性在两个依赖图中都被打开。
+indexmap = { version = "1.9", features = ["std"] }
 
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

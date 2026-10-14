@@ -1,6 +1,5 @@
 //! 规则数据源管理命令。
 
-use crate::commands::err;
 use crate::state::AppState;
 use nofakeip_core::geodata::{DataStatus, DataUpdater, UpdateReport};
 use std::sync::Arc;
