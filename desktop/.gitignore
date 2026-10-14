@@ -1,0 +1,16 @@
+# 前端
+node_modules/
+dist/
+.vite/
+
+# Tauri 生成的 Android / iOS 工程（由 `pnpm tauri android init` 生成，不入库）
+src-tauri/gen/
+
+# Rust 构建产物
+src-tauri/target/
+src-tauri/Cargo.lock
+
+# 系统
+.DS_Store
+Thumbs.db
+*.log
