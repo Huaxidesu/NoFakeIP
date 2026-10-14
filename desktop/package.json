@@ -6,7 +6,8 @@
   "description": "NoFakeIP 桌面 / Android 客户端（Tauri 2 + React）",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && node ../tools/verify-dist.mjs",
+    "verify:dist": "node ../tools/verify-dist.mjs",
     "preview": "vite preview",
     "tauri": "tauri"
   },

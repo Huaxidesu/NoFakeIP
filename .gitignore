@@ -27,6 +27,9 @@ desktop/src-tauri/gen/android/local.properties
 *.db-journal
 *.sqlite
 
+# 本地构建日志与调试产物（构建输出重定向到这里，见 doc/11 第 6.2 节）
+/.build-logs/
+
 # IDE
 .idea/
 .vscode/
