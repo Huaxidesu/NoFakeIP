@@ -1,8 +1,8 @@
 // 域名检测页：一个域名 → 分类 + 各 DNS 结果 + 污染/Fake-IP 判定 + 推荐。
+//
+// 检测状态与输入内容都在 tasks.ts 的模块级 store 里：切页面不会丢结果。
 
-import { useState } from "react";
 import type { AppCtx } from "../App";
-import * as api from "../api";
 import {
   Card,
   DataTable,
@@ -11,37 +11,24 @@ import {
   LatencyBadge,
   RegionBadge,
   RiskBadge,
+  ServerResultCards,
   Spinner,
   Stat,
-  useToast,
   type Column,
 } from "../components/ui";
-import type { DomainDiagnosis, ServerBenchResult } from "../types";
+import { setDetectDomain, startDetect, useDetect } from "../tasks";
+import type { ServerBenchResult } from "../types";
 import { PROTOCOL_LABEL, SOURCE_LABEL } from "../types";
 
 export default function DomainCheck({ ctx }: { ctx: AppCtx }) {
-  const toast = useToast();
-  const [domain, setDomain] = useState("github.com");
-  const [loading, setLoading] = useState(false);
-  const [diag, setDiag] = useState<DomainDiagnosis | null>(null);
+  const detect = useDetect();
+  const { domainText: domain, loading, diag } = detect;
 
-  const run = async () => {
+  const run = () => {
     const d = domain.trim();
-    if (!d) {
-      toast("请输入域名", "warn");
-      return;
-    }
-    setLoading(true);
-    try {
-      const enabled = ctx.servers.filter((s) => s.enabled).map((s) => s.id);
-      const r = await api.detectDomain(d, enabled);
-      setDiag(r);
-      await ctx.refreshStatus();
-    } catch (e) {
-      toast(`检测失败：${(e as Error).message}`, "error");
-    } finally {
-      setLoading(false);
-    }
+    if (!d) return;
+    const enabled = ctx.servers.filter((s) => s.enabled).map((s) => s.id);
+    void startDetect(d, enabled, ctx.refreshStatus);
   };
 
   const columns: Column<ServerBenchResult>[] = [
@@ -101,9 +88,9 @@ export default function DomainCheck({ ctx }: { ctx: AppCtx }) {
             className="grow"
             placeholder="例如 github.com"
             value={domain}
-            onChange={(e) => setDomain(e.target.value)}
+            onChange={(e) => setDetectDomain(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") void run();
+              if (e.key === "Enter") run();
             }}
           />
           <span className="hint">
@@ -150,12 +137,18 @@ export default function DomainCheck({ ctx }: { ctx: AppCtx }) {
           </div>
 
           <Card title="DNS 测速结果">
-            <DataTable
-              columns={columns}
-              rows={diag.bench.results}
-              initialSortKey="latency"
-              rowKey={(r) => `${r.server_id}-${r.server_name}`}
-            />
+            {/* 宽屏：表格；窄屏：卡片（表格 6 列在手机上要左右滑） */}
+            <div className="desktop-only">
+              <DataTable
+                columns={columns}
+                rows={diag.bench.results}
+                initialSortKey="latency"
+                rowKey={(r) => `${r.server_id}-${r.server_name}`}
+              />
+            </div>
+            <div className="mobile-only">
+              <ServerResultCards rows={diag.bench.results} />
+            </div>
           </Card>
 
           <div className="grid grid-2">

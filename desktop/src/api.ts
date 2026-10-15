@@ -20,13 +20,64 @@ import type {
   UpdateReport,
 } from "./types";
 
+/**
+ * 等待原生 IPC 桥就绪。
+ *
+ * 为什么需要：Android 上首次加载时，原生侧注入 `window.__TAURI_INTERNALS__`
+ * 的时机可能晚于页面脚本执行，导致挂载瞬间的调用抛
+ * `TypeError: Cannot read properties of undefined (reading 'invoke')`，
+ * 表现为首页数据全是 0、侧栏一直显示「加载中…」；手动刷新一次又正常。
+ * （release 包页面加载更快，比 debug 更容易撞上这个竞态。）
+ *
+ * 这里先轮询等桥出现再发请求，从根上消除这个时序问题。
+ */
+let ipcReady: Promise<void> | null = null;
+
+function waitForIpc(timeoutMs = 15000): Promise<void> {
+  if (!ipcReady) {
+    ipcReady = new Promise<void>((resolve) => {
+      const started = Date.now();
+      const check = () => {
+        const internals = (window as unknown as { __TAURI_INTERNALS__?: { invoke?: unknown } })
+          .__TAURI_INTERNALS__;
+        if (internals && typeof internals.invoke === "function") return resolve();
+        if (Date.now() - started >= timeoutMs) return resolve(); // 超时放行，让真正的调用去报错
+        setTimeout(check, 50);
+      };
+      check();
+    });
+  }
+  return ipcReady;
+}
+
+/**
+ * 判断是否为「启动初期的瞬时错误」，这类错误重试即可。
+ *
+ * Android 上首次加载会遇到两种竞态（桌面端不会）：
+ *  1. 原生 IPC 桥 `window.__TAURI_INTERNALS__` 还没注入
+ *     → `TypeError: Cannot read properties of undefined (reading 'invoke')`
+ *  2. 原生侧 `setup()` 还没执行完，`AppState` 尚未 `.manage()`
+ *     → `state not managed for field 'state' on command 'xxx'`
+ * 两者都是启动时序问题，稍后重试就会成功；刷新一次页面也能恢复。
+ */
+const TRANSIENT_IPC_ERROR =
+  /state not managed|Cannot read properties of undefined \(reading 'invoke'\)|__TAURI_INTERNALS__/i;
+
 /** 统一把 Rust 的 Err(String) 转成 Error。 */
 async function call<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
-  try {
-    return await invoke<T>(cmd, args);
-  } catch (e) {
-    throw new Error(typeof e === "string" ? e : String(e));
+  await waitForIpc();
+  let lastMsg = "";
+  for (let attempt = 0; attempt <= 25; attempt++) {
+    try {
+      return await invoke<T>(cmd, args);
+    } catch (e) {
+      lastMsg = typeof e === "string" ? e : String((e as Error)?.message ?? e);
+      if (!TRANSIENT_IPC_ERROR.test(lastMsg) || attempt === 25) break;
+      // 退避重试：100ms、200ms…最多 500ms 一次，累计约 12 秒
+      await new Promise((r) => setTimeout(r, Math.min(100 * (attempt + 1), 500)));
+    }
   }
+  throw new Error(lastMsg);
 }
 
 // —— 状态 ——

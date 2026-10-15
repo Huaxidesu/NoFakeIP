@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ⚠️ 环境适配补丁 E15（见 doc/11-构建发布与Android.md 第 2.9 节）
+  由 tools/build-android.sh 从 tools/android/themes-night.xml 覆盖写入。
+
+  深色模式。windowBackground 与前端 CSS 变量（名字是 bg）的深色值一致。
+  注意：XML 注释里不允许出现连续两个短横线。
+-->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Theme.nofakeip_desktop" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Customize your theme here. -->
+        <item name="android:windowBackground">#FF14171C</item>
+    </style>
+</resources>

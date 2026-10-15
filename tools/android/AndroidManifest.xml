@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ⚠️ 环境适配补丁 E8 + E16（见 doc/11-构建发布与Android.md 第 2.5 / 2.10 节）
+  由 tools/build-android.sh 从 tools/android/AndroidManifest.xml 覆盖写入。
+
+  相对 Tauri 生成的原版，本文件有两处改动：
+
+  E8  在 <application> 上加 android:networkSecurityConfig
+      —— Tauri 的 release 构建把 usesCleartextTraffic 设为 false（禁止明文 HTTP），
+         而「在线 IP 归属地查询」用的 ip-api.com 免费接口只有 http://，
+         会被系统静默拦截。用网络安全配置只对该域名放行，其余仍强制 HTTPS。
+
+  E16 在 <activity> 上加 android:screenOrientation="portrait"
+      —— 本应用只做手机竖屏（详见 doc/11 第 2.10 节）。
+         锁定竖屏还能顺带避免横屏时布局被系统栏挤压。
+
+  注意：Android 12 起，带 FLAG_SECURE 的 Activity 等少数场景无法锁定方向，
+  本应用不涉及。
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- AndroidTV support -->
+    <uses-feature android:name="android.software.leanback" android:required="false" />
+
+    <application
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@style/Theme.nofakeip_desktop"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:usesCleartextTraffic="${usesCleartextTraffic}">
+        <activity
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
+            android:launchMode="singleTask"
+            android:label="@string/main_activity_title"
+            android:name=".MainActivity"
+            android:screenOrientation="portrait"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <!-- AndroidTV support -->
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <provider
+          android:name="androidx.core.content.FileProvider"
+          android:authorities="${applicationId}.fileprovider"
+          android:exported="false"
+          android:grantUriPermissions="true">
+          <meta-data
+            android:name="android.support.FILE_PROVIDER_PATHS"
+            android:resource="@xml/file_paths" />
+        </provider>
+    </application>
+</manifest>
