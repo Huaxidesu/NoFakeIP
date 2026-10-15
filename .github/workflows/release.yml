@@ -71,7 +71,7 @@ jobs:
       build_linux: ${{ steps.plan.outputs.linux }}
       build_android: ${{ steps.plan.outputs.android }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # 版本号的唯一来源是根 Cargo.toml 的 [workspace.package] version。
       # 前端 package.json、tauri.conf.json、src-tauri/Cargo.toml 都靠
@@ -167,7 +167,7 @@ jobs:
     if: needs.prepare.outputs.build_windows == '1'
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -175,11 +175,11 @@ jobs:
         with:
           workspaces: desktop/src-tauri
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v5
         with:
           version: 10
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
@@ -199,16 +199,27 @@ jobs:
         shell: pwsh
         working-directory: desktop/src-tauri/target/release
         run: |
+          $ErrorActionPreference = 'Stop'
           $V = "${{ needs.prepare.outputs.version }}"
           $Out = "stage"
           New-Item -ItemType Directory -Force -Path $Out | Out-Null
 
-          # 便携版：target/release 下就是 nofakeip.exe
-          Copy-Item "nofakeip.exe" "$Out/NoFakeIP_${V}_windows-portable.exe"
+          # 便携版：Tauri 产出的可执行文件名 = 可执行名（cargo 包名），
+          # 而不是 productName。这里不硬编码，直接取 target/release 根目录下
+          # 修改时间最新的那个 .exe —— 排除 bundle 子目录（里面是安装包）。
+          $Portable = Get-ChildItem "*.exe" -File |
+                      Where-Object { $_.DirectoryName -eq (Get-Location).Path } |
+                      Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          if (-not $Portable) {
+            Write-Error "在 target/release 下找不到可执行文件，构建可能未产出主程序。"
+          }
+          Write-Host "便携版来源：$($Portable.Name)（$($Portable.Length) 字节）"
+          Copy-Item $Portable.FullName "$Out/NoFakeIP_${V}_windows-portable.exe"
 
           # NSIS 安装包：目录里只有一个，按修改时间取最新的那个更稳妥
-          $Setup = Get-ChildItem "bundle/nsis/*.exe" -ErrorAction Stop |
+          $Setup = Get-ChildItem "bundle/nsis/*.exe" -File -ErrorAction Stop |
                    Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          Write-Host "安装包来源：$($Setup.Name)（$($Setup.Length) 字节）"
           Copy-Item $Setup.FullName "$Out/NoFakeIP_${V}_x64-setup.exe"
 
           # 附一份产物说明，随包一起发出去。
@@ -234,7 +245,7 @@ jobs:
 
           Get-ChildItem $Out | Format-Table Name, Length
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: windows-desktop
           path: desktop/src-tauri/target/release/stage/*
@@ -249,7 +260,7 @@ jobs:
     if: needs.prepare.outputs.build_windows == '1'
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -267,7 +278,7 @@ jobs:
           Copy-Item "target/release/nofakeip.exe" $Out
           Compress-Archive -Path "$Out/*" -DestinationPath "$Out.zip"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: windows-cli
           path: stage/*.zip
@@ -282,7 +293,7 @@ jobs:
     if: needs.prepare.outputs.build_android == '1'
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -292,21 +303,21 @@ jobs:
         with:
           workspaces: desktop/src-tauri
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: zulu
           java-version: 21
 
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v4
 
       - name: 安装 NDK
         run: sdkmanager --install "ndk;27.2.12479018"
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v5
         with:
           version: 10
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
@@ -407,7 +418,7 @@ jobs:
 
           ls -la stage/
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: android-apk
           path: desktop/stage/*.apk
@@ -422,7 +433,7 @@ jobs:
     if: needs.prepare.outputs.build_linux == '1'
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -445,11 +456,11 @@ jobs:
             build-essential \
             curl wget file
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v5
         with:
           version: 10
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
@@ -473,7 +484,7 @@ jobs:
           chmod +x "stage/NoFakeIP_${V}_amd64.AppImage"
           ls -la stage/
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: linux-desktop
           path: desktop/stage/*.AppImage
@@ -488,7 +499,7 @@ jobs:
     if: needs.prepare.outputs.build_linux == '1'
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -505,7 +516,7 @@ jobs:
           cp target/release/nofakeip "$OUT/"
           tar -czf "$OUT.tar.gz" "$OUT"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: linux-cli
           path: nofakeip-cli_*.tar.gz
@@ -527,7 +538,7 @@ jobs:
       !contains(needs.*.result, 'cancelled')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: artifacts
 
@@ -536,6 +547,22 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p release-assets
+
+          # download-artifact v8 起不再无条件解压：若某个 artifact 被以「直接上传」
+          # 方式存成了单个文件，这里拿到的就是压缩包而非解压后的内容。
+          # 注意：本工作流的 CLI 产物本身就是 .zip（nofakeip-cli_*.zip），
+          # 那是要发给用户的成品，绝不能在这里解开。所以判据不能只看扩展名，
+          # 而是看它是不是「artifact 根目录下的孤立 zip」——正常解压过的
+          # artifact 会形成一层同名目录，里面的 zip 属于成品。
+          find artifacts -maxdepth 2 -type f -name '*.zip' | while read -r z; do
+            # zip 所在目录若等于 artifacts 本身，说明该 artifact 未被解压
+            if [ "$(dirname "$z")" = "artifacts" ]; then
+              echo "解压兜底（artifact 未解压）：$z"
+              unzip -o -q "$z" -d "$(basename "${z%.zip}")"
+              rm -f "$z"
+            fi
+          done
+
           find artifacts -type f ! -name '*.sha256' -exec cp {} release-assets/ \;
 
           echo "待上传文件："
@@ -584,7 +611,7 @@ jobs:
           EOF
 
       - name: 创建 / 更新 Release 并上传产物
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.prepare.outputs.tag }}
           name: NoFakeIP ${{ needs.prepare.outputs.version }}
@@ -620,7 +647,7 @@ jobs:
       !contains(needs.*.result, 'failure')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: artifacts
 
@@ -630,7 +657,7 @@ jobs:
           tar -czf "NoFakeIP_${V}_all-builds.tar.gz" -C artifacts .
           ls -la
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: all-builds-${{ needs.prepare.outputs.version }}
           path: NoFakeIP_*_all-builds.tar.gz
