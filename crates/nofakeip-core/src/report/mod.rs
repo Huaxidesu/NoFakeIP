@@ -464,7 +464,7 @@ mod tests {
     }
 
     #[test]
-    fn no_clash_output_anywhere() {
+    fn no_prohibited_output_anywhere() {
         let d = sample_diagnosis();
         let md = render_domain_markdown(&d, &ReportOptions::default());
         let lower = md.to_ascii_lowercase();

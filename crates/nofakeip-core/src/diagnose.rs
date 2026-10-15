@@ -102,7 +102,7 @@ impl Diagnoser {
         })
     }
 
-    /// 依次诊断多个域名（串行，避免把上游打爆）。
+    /// 依次诊断多个域名（串行执行，避免对上游 DNS 造成过大压力）。
     pub async fn diagnose_many(
         &self,
         domains: &[String],

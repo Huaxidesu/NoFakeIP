@@ -145,7 +145,7 @@ pub struct DnsServer {
     /// DoT 的 SNI / DoH 的 Host 头；缺省时从 address 推导
     #[serde(default)]
     pub host: Option<String>,
-    /// 服务器域名自身解析用（避免鸡生蛋问题）
+    /// 服务器域名自身解析用（避免 bootstrap 解析的循环依赖）
     #[serde(default)]
     pub bootstrap_ip: Option<String>,
     #[serde(default = "default_region")]

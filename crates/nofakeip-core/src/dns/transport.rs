@@ -435,7 +435,7 @@ fn host_of_address(address: &str) -> String {
 
 /// 解析 DNS 服务器自身的地址。
 ///
-/// 优先使用 `bootstrap_ip`（避免「用域名解析域名」的鸡生蛋问题），
+/// 优先使用 `bootstrap_ip`（避免「用域名解析域名」的循环依赖），
 /// 否则用系统解析器。
 pub async fn resolve_server_addr(server: &DnsServer, proto: DnsProtocol) -> Result<SocketAddr> {
     let port = proto.default_port();

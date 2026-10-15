@@ -3,7 +3,7 @@
 //! 命令与输出规范见 `doc/07-CLI规格.md`。
 //!
 //! **范围说明**：本工具只做 DNS 测速、域名分类、污染检测与报告输出，
-//! **不生成、不修改任何 Clash / OpenClash / Clash Verge 配置**。
+//! **不生成、不修改任何代理软件配置**。
 
 mod commands;
 mod output;
@@ -32,7 +32,7 @@ pub mod exit {
         · 自动识别域名属于国内还是国外\n  \
         · 检测 DNS 污染与本地 Fake-IP 是否正常\n  \
         · 给出基于实测的 DNS 使用建议与可读诊断报告\n\n\
-        本工具不生成、不修改任何 Clash / OpenClash / Clash Verge 配置。",
+        本工具不生成、不修改任何代理软件配置。",
     disable_help_subcommand = true
 )]
 pub struct Cli {

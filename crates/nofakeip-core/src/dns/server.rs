@@ -143,14 +143,14 @@ impl ServerRegistry {
     /// - `udp://8.8.8.8`、`tcp://8.8.8.8`
     /// - `tls://1.1.1.1:853`、`dot://dns.quad9.net#dns.quad9.net`
     /// - `https://dns.alidns.com/dns-query`、`doh://dns.quad9.net`
-    /// - `1.1.1.1@853#cloudflare-dns.com`（Clash 风格）
+    /// - `1.1.1.1@853#cloudflare-dns.com`（通用 `ip@端口#SNI` 风格）
     pub fn parse_server(&self, raw: &str) -> Result<DnsServer> {
         let input = raw.trim();
         if input.is_empty() {
             return Err(CoreError::Config("DNS 配置为空".into()));
         }
 
-        // Clash 风格：ip@port#sni
+        // 通用风格：ip@port#sni
         if let Some((main, sni)) = input.split_once('#') {
             let (host, port) = match main.split_once('@') {
                 Some((h, p)) => (
@@ -322,7 +322,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_clash_style_at_hash() {
+    fn parse_at_hash_style() {
         let reg = ServerRegistry::new();
         let s = reg.parse_server("1.1.1.1@853#cloudflare-dns.com").unwrap();
         assert_eq!(s.protocol, DnsProtocol::Dot);

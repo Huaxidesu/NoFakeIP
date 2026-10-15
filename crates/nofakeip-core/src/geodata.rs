@@ -7,7 +7,7 @@
 //! 4. 更新采用「先写临时文件再原子改名」，中断不会损坏已有数据。
 //!
 //! **范围说明**：本模块只维护 NoFakeIP **自己使用**的数据（国内域名表、中国 IP 网段表、
-//! 国外域名表）。**不涉及任何 Clash / OpenClash / Clash Verge 相关的数据文件或配置生成。**
+//! 国外域名表）。**不涉及任何代理软件的数据文件或配置生成。**
 
 use crate::data::BuiltinData;
 use crate::error::{CoreError, Result};
@@ -512,8 +512,8 @@ mod tests {
     }
 
     #[test]
-    fn no_clash_related_sources() {
-        // 明确约束：不再包含任何 Clash 生态的数据文件
+    fn no_prohibited_data_sources() {
+        // 明确约束：不包含任何代理软件生态的数据文件
         for s in sources() {
             let blob = format!("{} {} {}", s.id, s.target_file, s.candidates.join(" "));
             let lower = blob.to_ascii_lowercase();
