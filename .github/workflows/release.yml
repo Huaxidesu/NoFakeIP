@@ -333,6 +333,16 @@ jobs:
         working-directory: desktop
         run: pnpm tauri android init --ci
 
+      # gen/ 不入库，init 出来的是默认模板：未签名（装不上，报
+      # INSTALL_PARSE_FAILED_NO_CERTIFICATES）、图标是 Tauri 默认、
+      # 且缺本地的原生模板补丁。这里重放全部补丁，与本地构建对齐。
+      # 签名密钥优先取 Secret ANDROID_KEYSTORE_BASE64（jks 的 base64，
+      # 签名跨构建稳定、可覆盖升级）；未配置时现生成自签名开发密钥。
+      - name: 应用 Android 补丁与签名
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: bash tools/ci-android-setup.sh
+
       # CI runner 的 NDK 路径与本地不同，用环境变量覆盖交叉编译配置。
       - name: 指向 CI 的 NDK
         working-directory: desktop/src-tauri
@@ -414,6 +424,8 @@ jobs:
           说明：DNS 诊断与测速工具，面向 Fake-IP 模式用户。
                 只做测量与判断，不生成、不修改任何软件配置。
                 本 APK 使用自签名证书，仅供安装测试。
+                ⚠️ 若手机上已装过其他来源构建的版本（如本地构建），
+                覆盖安装可能提示签名不一致，需先卸载旧版再装。
           EOF
 
           ls -la stage/
