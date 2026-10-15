@@ -6,9 +6,16 @@
 use crate::error::{CoreError, Result};
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::time::timeout;
+
+pub mod proxy;
+pub use proxy::{detect_proxy_url, resolve_proxy, ProxyMode, ProxyScheme, ProxyUrl, PROBE_PORTS};
+
+/// 可对象化的读写流（明文 TCP 或 TLS）。`Send` 约束使返回的 Future 可跨线程（Tauri async command 要求）。
+trait AsyncReadWrite: AsyncRead + AsyncWrite + Unpin + Send {}
+impl<T: AsyncRead + AsyncWrite + Unpin + Send> AsyncReadWrite for T {}
 
 /// 简单 URL 解析结果。
 #[derive(Debug, Clone, PartialEq)]
@@ -126,12 +133,15 @@ pub struct HttpClient {
     timeout: Duration,
     max_redirects: usize,
     user_agent: String,
+    /// 可选出站代理（None = 直连）
+    proxy: Option<ProxyUrl>,
 }
 
 impl std::fmt::Debug for HttpClient {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("HttpClient")
             .field("timeout", &self.timeout)
+            .field("proxy", &self.proxy)
             .finish_non_exhaustive()
     }
 }
@@ -149,11 +159,18 @@ impl HttpClient {
             timeout: Duration::from_secs(30),
             max_redirects: 5,
             user_agent: format!("NoFakeIP/{}", crate::VERSION),
+            proxy: None,
         }
     }
 
     pub fn with_timeout(mut self, d: Duration) -> Self {
         self.timeout = d;
+        self
+    }
+
+    /// 设置出站代理（None = 直连）。
+    pub fn with_proxy(mut self, proxy: Option<ProxyUrl>) -> Self {
+        self.proxy = proxy;
         self
     }
 
@@ -200,13 +217,17 @@ impl HttpClient {
 
     async fn get_once(&self, url: &Url) -> Result<RawResponse> {
         let fut = async {
-            let addr = resolve(url).await?;
-            let mut stream = TcpStream::connect(addr).await?;
-            stream.set_nodelay(true).ok();
-
+            let mut stream = self.connect(url).await?;
+            // 经 HTTP 代理访问 http 目标时使用绝对 URI；其余情况沿用原路径
+            let target = match (&self.proxy, url.scheme.as_str()) {
+                (Some(p), "http") if p.scheme == ProxyScheme::Http => {
+                    format!("http://{}:{}{}", url.host, url.port, url.path)
+                }
+                _ => url.path.clone(),
+            };
             let request = format!(
                 "GET {} HTTP/1.1\r\nHost: {}\r\nUser-Agent: {}\r\nAccept: */*\r\nConnection: close\r\n\r\n",
-                url.path,
+                target,
                 if url.port == 80 || url.port == 443 {
                     url.host.clone()
                 } else {
@@ -237,18 +258,52 @@ impl HttpClient {
             Err(_) => Err(CoreError::Timeout(self.timeout)),
         }
     }
+
+    /// 建立到目标的 TCP 连接（直连，或经代理：HTTP CONNECT / SOCKS5）。
+    ///
+    /// 走代理时把目标主机名原样交给代理解析（HTTP CONNECT 天然如此，
+    /// SOCKS5 使用 ATYP=3，等效 socks5h）。
+    async fn connect(&self, url: &Url) -> Result<Box<dyn AsyncReadWrite>> {
+        let p = match &self.proxy {
+            None => {
+                let addr = resolve(url).await?;
+                let s = TcpStream::connect(addr).await?;
+                s.set_nodelay(true).ok();
+                return Ok(Box::new(s));
+            }
+            Some(p) => p,
+        };
+        let mut s = TcpStream::connect(resolve_host(&p.host, p.port).await?).await?;
+        s.set_nodelay(true).ok();
+        match p.scheme {
+            ProxyScheme::Http => {
+                if url.scheme == "https" {
+                    proxy::http_connect(&mut s, &url.host, url.port).await?;
+                }
+                Ok(Box::new(s))
+            }
+            ProxyScheme::Socks5 => {
+                proxy::socks5_connect(&mut s, &url.host, url.port).await?;
+                Ok(Box::new(s))
+            }
+        }
+    }
 }
 
 async fn resolve(url: &Url) -> Result<std::net::SocketAddr> {
-    if let Ok(ip) = url.host.parse::<std::net::IpAddr>() {
-        return Ok(std::net::SocketAddr::new(ip, url.port));
+    resolve_host(&url.host, url.port).await
+}
+
+async fn resolve_host(host: &str, port: u16) -> Result<std::net::SocketAddr> {
+    if let Ok(ip) = host.parse::<std::net::IpAddr>() {
+        return Ok(std::net::SocketAddr::new(ip, port));
     }
-    let mut addrs = tokio::net::lookup_host((url.host.as_str(), url.port))
+    let mut addrs = tokio::net::lookup_host((host, port))
         .await
-        .map_err(|e| CoreError::Network(format!("解析 {} 失败: {}", url.host, e)))?;
+        .map_err(|e| CoreError::Network(format!("解析 {} 失败: {}", host, e)))?;
     addrs
         .next()
-        .ok_or_else(|| CoreError::Network(format!("{} 无可用地址", url.host)))
+        .ok_or_else(|| CoreError::Network(format!("{} 无可用地址", host)))
 }
 
 struct RawResponse {

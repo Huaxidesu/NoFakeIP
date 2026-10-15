@@ -3,6 +3,7 @@
 use nofakeip_core::benchmark::BenchmarkOptions;
 use nofakeip_core::classifier::DomainClassifier;
 use nofakeip_core::diagnose::Diagnoser;
+use nofakeip_core::net::ProxyUrl;
 use nofakeip_core::pollution::PollutionDetector;
 use nofakeip_core::storage::Storage;
 use serde::{Deserialize, Serialize};
@@ -20,6 +21,10 @@ pub struct Settings {
     pub fake_ip_range: String,
     pub online_geo: bool,
     pub sample_domains: Vec<String>,
+    /// 出站代理模式："auto"（自动探测）/ "custom"（手动地址）/ "off"（强制直连）。
+    pub proxy_mode: String,
+    /// 手动模式下的代理地址（`http://` 或 `socks5://`）。
+    pub proxy_url: String,
 }
 
 impl Default for Settings {
@@ -35,6 +40,9 @@ impl Default for Settings {
                 .iter()
                 .map(|s| s.to_string())
                 .collect(),
+            // 默认自动探测（环境变量 → 本机常见代理端口），照顾 mihomo 等裸内核用户
+            proxy_mode: "auto".to_string(),
+            proxy_url: String::new(),
         }
     }
 }
@@ -56,16 +64,24 @@ pub struct AppState {
     /// 诊断器：设置变化（Fake-IP 段 / 在线归属地 / 用户规则）时整体替换。
     /// 用 `Arc` + 短锁：取出 Arc 后立刻释放锁再 await，避免跨 await 持锁。
     diagnoser: Mutex<Arc<Diagnoser>>,
+    /// 已解析的出站代理（按 settings 的 proxy_mode 解析一次后缓存）。
+    proxy: Mutex<Option<ProxyUrl>>,
+    /// 功能页快捷开关：是否启用出站代理（关闭后即使已探测到也直连）。
+    proxy_enabled: std::sync::atomic::AtomicBool,
 }
 
 impl AppState {
     pub fn new(data_dir: PathBuf, storage: Storage, settings: Settings) -> anyhow::Result<Self> {
-        let diagnoser = build_diagnoser(&data_dir, &settings, &storage)?;
+        // 启动时先以「无代理」构建诊断器；代理解析是异步操作，
+        // 由 lib.rs 的 setup 里 spawn 后台任务完成后重建。
+        let diagnoser = build_diagnoser(&data_dir, &settings, &storage, None)?;
         Ok(Self {
             data_dir,
             storage,
             settings: Mutex::new(settings),
             diagnoser: Mutex::new(Arc::new(diagnoser)),
+            proxy: Mutex::new(None),
+            proxy_enabled: std::sync::atomic::AtomicBool::new(true),
         })
     }
 
@@ -83,10 +99,52 @@ impl AppState {
             .unwrap_or_default()
     }
 
+    /// 当前生效的出站代理（受快捷开关控制；None = 直连）。
+    pub fn proxy_snapshot(&self) -> Option<ProxyUrl> {
+        use std::sync::atomic::Ordering;
+        if !self.proxy_enabled.load(Ordering::SeqCst) {
+            return None;
+        }
+        self.proxy_raw()
+    }
+
+    /// 已解析的代理（不受快捷开关影响，供状态展示）。
+    pub fn proxy_raw(&self) -> Option<ProxyUrl> {
+        self.proxy.lock().ok().and_then(|g| g.clone())
+    }
+
+    pub fn proxy_enabled(&self) -> bool {
+        use std::sync::atomic::Ordering;
+        self.proxy_enabled.load(Ordering::SeqCst)
+    }
+
+    pub fn set_proxy_enabled(&self, enabled: bool) {
+        use std::sync::atomic::Ordering;
+        self.proxy_enabled.store(enabled, Ordering::SeqCst);
+    }
+
+    /// 存入新解析出的代理并重建诊断器（在线归属地查询会带上代理）。
+    pub fn set_resolved_proxy(&self, proxy: Option<ProxyUrl>) -> anyhow::Result<()> {
+        if let Ok(mut g) = self.proxy.lock() {
+            *g = proxy;
+        }
+        self.rebuild_diagnoser()
+    }
+
+    /// 用当前设置 + 当前代理重建诊断器。
+    pub fn rebuild_diagnoser(&self) -> anyhow::Result<()> {
+        let settings = self.settings_snapshot();
+        let rebuilt = build_diagnoser(&self.data_dir, &settings, &self.storage, self.proxy_raw())?;
+        if let Ok(mut g) = self.diagnoser.lock() {
+            *g = Arc::new(rebuilt);
+        }
+        Ok(())
+    }
+
     /// 更新设置并按需重建诊断器。
     pub fn apply_settings(&self, next: Settings) -> anyhow::Result<()> {
         let storage = &self.storage;
-        let rebuilt = build_diagnoser(&self.data_dir, &next, storage)?;
+        let rebuilt = build_diagnoser(&self.data_dir, &next, storage, self.proxy_raw())?;
         if let Ok(mut g) = self.diagnoser.lock() {
             *g = Arc::new(rebuilt);
         }
@@ -97,16 +155,17 @@ impl AppState {
     }
 }
 
-/// 构造诊断器：加载用户自定义规则、Fake-IP 段、在线归属地开关。
+/// 构造诊断器：加载用户自定义规则、Fake-IP 段、在线归属地开关与出站代理。
 pub fn build_diagnoser(
     dir: &Path,
     settings: &Settings,
     storage: &Storage,
+    proxy: Option<ProxyUrl>,
 ) -> anyhow::Result<Diagnoser> {
     let detector = PollutionDetector::with_data_dir(Some(dir))
         .with_fake_ip_range(&settings.fake_ip_range)
         .map_err(|e| anyhow::anyhow!(e.to_string()))?
-        .with_online_geo(settings.online_geo);
+        .with_online_geo_and_proxy(settings.online_geo, proxy);
 
     let mut classifier = DomainClassifier::with_data_dir(Some(dir));
     for r in storage.list_rules().map_err(|e| anyhow::anyhow!(e.to_string()))? {

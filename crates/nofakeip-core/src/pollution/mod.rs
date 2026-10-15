@@ -216,6 +216,20 @@ impl PollutionDetector {
         self
     }
 
+    /// 启用在线归属地查询并指定其出站代理（None = 直连）。
+    pub fn with_online_geo_and_proxy(
+        mut self,
+        enabled: bool,
+        proxy: Option<crate::net::ProxyUrl>,
+    ) -> Self {
+        self.online = if enabled {
+            Some(Arc::new(OnlineGeo::new().with_proxy(proxy)))
+        } else {
+            None
+        };
+        self
+    }
+
     pub fn online_geo_enabled(&self) -> bool {
         self.online.is_some()
     }

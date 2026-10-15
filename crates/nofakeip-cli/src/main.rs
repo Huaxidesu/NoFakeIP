@@ -60,6 +60,15 @@ pub struct Cli {
     #[arg(long, global = true, default_value_t = 16, value_name = "N")]
     pub concurrency: usize,
 
+    /// 出站代理地址（如 http://127.0.0.1:7890 或 socks5://127.0.0.1:7891），
+    /// 影响规则数据更新与在线归属地查询；未指定时自动探测环境变量与本机常见代理端口
+    #[arg(long, global = true, value_name = "URL", conflicts_with = "no_proxy")]
+    pub proxy: Option<String>,
+
+    /// 强制直连（忽略环境变量与自动探测）
+    #[arg(long, global = true)]
+    pub no_proxy: bool,
+
     /// 启用在线 IP 归属地查询（默认关闭；开启后会把 IP 发送给第三方服务）
     #[arg(long, global = true)]
     pub online_geo: bool,

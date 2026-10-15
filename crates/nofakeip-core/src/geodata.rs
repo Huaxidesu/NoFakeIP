@@ -181,6 +181,12 @@ impl DataUpdater {
         self
     }
 
+    /// 设置数据下载使用的出站代理（None = 直连）。
+    pub fn with_proxy(mut self, proxy: Option<crate::net::ProxyUrl>) -> Self {
+        self.http = self.http.with_proxy(proxy);
+        self
+    }
+
     pub fn data_dir(&self) -> &Path {
         &self.data_dir
     }

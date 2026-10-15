@@ -17,12 +17,22 @@ import {
   type Column,
 } from "../components/ui";
 import { setDetectDomain, startDetect, useDetect } from "../tasks";
-import type { ServerBenchResult } from "../types";
+import * as api from "../api";
+import { useEffect, useState } from "react";
+import type { ProxyStatus, ServerBenchResult } from "../types";
 import { PROTOCOL_LABEL, SOURCE_LABEL } from "../types";
 
 export default function DomainCheck({ ctx }: { ctx: AppCtx }) {
   const detect = useDetect();
   const { domainText: domain, loading, diag } = detect;
+
+  // 在线归属地开启时展示出站代理状态（帮助 mihomo 等裸内核用户理解联网状态）
+  const onlineGeo = ctx.settings?.online_geo ?? false;
+  const [proxy, setProxy] = useState<ProxyStatus | null>(null);
+  useEffect(() => {
+    if (!onlineGeo) return;
+    void api.getProxyStatus().then(setProxy).catch(() => setProxy(null));
+  }, [onlineGeo]);
 
   const run = () => {
     const d = domain.trim();
@@ -97,6 +107,18 @@ export default function DomainCheck({ ctx }: { ctx: AppCtx }) {
             将使用 {ctx.servers.filter((s) => s.enabled).length} 个已启用节点做交叉比对
           </span>
         </div>
+        {onlineGeo && proxy && (
+          <p className="hint" style={{ margin: "8px 0 0" }}>
+            在线 IP 归属地已开启 — 出站请求：
+            {proxy.effective_url ? (
+              <>
+                走代理 <span className="mono">{proxy.effective_url}</span>
+              </>
+            ) : (
+              <>直连（如需走代理，到「设置 → 网络代理」开启）</>
+            )}
+          </p>
+        )}
       </Card>
 
       {diag && (

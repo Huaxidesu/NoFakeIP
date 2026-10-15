@@ -112,6 +112,34 @@ fn options(cli: &Cli) -> BenchmarkOptions {
         .with_concurrency(cli.concurrency)
 }
 
+/// 解析出站代理设置。
+///
+/// 优先级：`--proxy <url>` 显式指定 > 自动探测（环境变量 → 本机常见代理端口）
+/// > `--no-proxy` 强制直连。
+fn cli_proxy(cli: &Cli) -> Result<Option<nofakeip_core::net::ProxyUrl>> {
+    let mode = if cli.no_proxy {
+        nofakeip_core::net::ProxyMode::Direct
+    } else {
+        cli.proxy
+            .clone()
+            .map(nofakeip_core::net::ProxyMode::Custom)
+            .unwrap_or_default() // Auto
+    };
+    let proxy = run_blocking(nofakeip_core::net::resolve_proxy(&mode))?
+        .map_err(|e| anyhow!(e.to_string()))?;
+    if let Some(p) = &proxy {
+        out_note(&format!("出站代理: {}", p));
+    }
+    Ok(proxy)
+}
+
+/// 仅在非静默模式下向 stderr 输出一条提示。
+fn out_note(msg: &str) {
+    if std::env::var("NOFAKEIP_QUIET").as_deref() != Ok("1") {
+        eprintln!("[i] {}", msg);
+    }
+}
+
 /// 解析要使用的服务器列表。
 fn resolve_servers(st: &Storage, filter: &[String]) -> Result<Vec<DnsServer>> {
     let all = st.list_servers(true).map_err(|e| anyhow!(e.to_string()))?;
@@ -142,12 +170,13 @@ fn resolve_servers(st: &Storage, filter: &[String]) -> Result<Vec<DnsServer>> {
     Ok(out)
 }
 
-/// 构造诊断器（加载用户规则、Fake-IP 段、在线归属地开关）。
+/// 构造诊断器（加载用户规则、Fake-IP 段、在线归属地开关与出站代理）。
 fn build_diagnoser(cli: &Cli, dir: &Path, st: &Storage) -> Result<Diagnoser> {
+    let proxy = cli_proxy(cli)?;
     let detector = PollutionDetector::with_data_dir(Some(dir))
         .with_fake_ip_range(&cli.fake_ip_range)
         .map_err(|e| anyhow!(e.to_string()))?
-        .with_online_geo(cli.online_geo);
+        .with_online_geo_and_proxy(cli.online_geo, proxy);
 
     let mut classifier = DomainClassifier::with_data_dir(Some(dir));
     for r in st.list_rules().map_err(|e| anyhow!(e.to_string()))? {
@@ -659,6 +688,8 @@ fn cmd_data(cli: &Cli, out: &Out, dir: &Path, action: &DataAction) -> Result<u8>
                 "开始更新指定数据源…"
             });
 
+            // 数据下载走出站代理（--proxy / 自动探测），照顾 mihomo 等无系统代理用户
+            let updater = updater.with_proxy(cli_proxy(cli)?);
             let reports = run_blocking(async {
                 if use_all {
                     let all_ids: Vec<String> = updater.sources().iter().map(|s| s.id.clone()).collect();

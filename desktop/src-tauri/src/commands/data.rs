@@ -19,7 +19,8 @@ pub async fn update_data_sources(
     state: State<'_, AppState>,
     ids: Vec<String>,
 ) -> Result<Vec<UpdateReport>, String> {
-    let updater = DataUpdater::new(state.data_dir.clone());
+    // 出站代理（按设置自动探测 / 手动 / 关闭；受功能页快捷开关控制）
+    let updater = DataUpdater::new(state.data_dir.clone()).with_proxy(state.proxy_snapshot());
     let emitter = app.clone();
     let progress: nofakeip_core::geodata::ProgressFn = Arc::new(move |done, total, name| {
         let _ = emitter.emit(

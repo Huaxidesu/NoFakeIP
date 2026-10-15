@@ -21,7 +21,10 @@ pub use dns::{
     update_server,
 };
 pub use report::{generate_report, save_text_file};
-pub use status::{get_data_dir, get_recommendation, get_settings, get_status, set_settings};
+pub use status::{
+    get_data_dir, get_proxy_status, get_recommendation, get_settings, get_status, set_proxy_enabled,
+    set_settings,
+};
 pub use storage::{list_benchmarks, list_history};
 
 /// 把核心错误统一转成前端可读的中文消息。

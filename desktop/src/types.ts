@@ -220,6 +220,19 @@ export interface Settings {
   fake_ip_range: string;
   online_geo: boolean;
   sample_domains: string[];
+  /** 出站代理模式："auto" / "custom" / "off" */
+  proxy_mode: string;
+  /** 手动模式下的代理地址 */
+  proxy_url: string;
+}
+
+/** 出站代理当前状态 */
+export interface ProxyStatus {
+  mode: string;
+  custom_url: string;
+  resolved_url: string | null;
+  enabled: boolean;
+  effective_url: string | null;
 }
 
 export interface BenchProgress {

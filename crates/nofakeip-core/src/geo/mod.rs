@@ -192,6 +192,12 @@ impl OnlineGeo {
         }
     }
 
+    /// 设置在线查询使用的出站代理（None = 直连）。
+    pub fn with_proxy(mut self, proxy: Option<crate::net::ProxyUrl>) -> Self {
+        self.http = self.http.with_proxy(proxy);
+        self
+    }
+
     /// 查询单个 IP（带内存缓存）。
     pub async fn lookup_async(&self, ip: IpAddr) -> Option<IpGeo> {
         if let Ok(cache) = self.cache.lock() {

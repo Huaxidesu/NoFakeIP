@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import type { AppCtx } from "../App";
 import * as api from "../api";
 import { Card, DataTable, Field, ProgressBar, RegionBadge, Spinner, useToast, type Column } from "../components/ui";
-import type { DataProgress, DataStatus, DnsServer, Settings as SettingsModel } from "../types";
+import type { DataProgress, DataStatus, DnsServer, ProxyStatus, Settings as SettingsModel } from "../types";
 import { PROTOCOL_LABEL } from "../types";
 
 export default function SettingsPage({ ctx }: { ctx: AppCtx }) {
@@ -24,6 +24,9 @@ export default function SettingsPage({ ctx }: { ctx: AppCtx }) {
   const [updating, setUpdating] = useState(false);
   const [dataProgress, setDataProgress] = useState<DataProgress | null>(null);
 
+  // —— 代理状态（规则数据卡展示 + 快捷开关） ——
+  const [proxyStatus, setProxyStatus] = useState<ProxyStatus | null>(null);
+
   useEffect(() => setForm(ctx.settings), [ctx.settings]);
 
   const loadSources = async () => {
@@ -36,6 +39,7 @@ export default function SettingsPage({ ctx }: { ctx: AppCtx }) {
 
   useEffect(() => {
     void loadSources();
+    void api.getProxyStatus().then(setProxyStatus).catch(() => setProxyStatus(null));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -45,11 +49,31 @@ export default function SettingsPage({ ctx }: { ctx: AppCtx }) {
     try {
       await api.setSettings(form);
       await ctx.refreshSettings();
+      await refreshProxyStatus();
       toast("设置已保存", "ok");
     } catch (e) {
       toast(`保存失败：${(e as Error).message}`, "error");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const refreshProxyStatus = async () => {
+    try {
+      setProxyStatus(await api.getProxyStatus());
+    } catch {
+      setProxyStatus(null);
+    }
+  };
+
+  const toggleProxy = async () => {
+    if (!proxyStatus) return;
+    try {
+      await api.setProxyEnabled(!proxyStatus.enabled);
+      await refreshProxyStatus();
+      toast(proxyStatus.enabled ? "已切换为直连" : "出站请求将走代理", "ok");
+    } catch (e) {
+      toast(`操作失败：${(e as Error).message}`, "error");
     }
   };
 
@@ -273,6 +297,37 @@ export default function SettingsPage({ ctx }: { ctx: AppCtx }) {
               </span>
             </label>
 
+            <div className="row" style={{ gap: 12, alignItems: "flex-start", marginBottom: 12 }}>
+              <Field label="网络代理" hint="用于规则数据更新与在线归属地查询">
+                <select
+                  style={{ width: 140 }}
+                  value={form.proxy_mode}
+                  onChange={(e) => setForm({ ...form, proxy_mode: e.target.value })}
+                >
+                  <option value="auto">自动探测</option>
+                  <option value="custom">手动配置</option>
+                  <option value="off">关闭（直连）</option>
+                </select>
+              </Field>
+              {form.proxy_mode === "custom" && (
+                <Field label="代理地址">
+                  <input
+                    type="text"
+                    style={{ width: 260 }}
+                    placeholder="socks5://127.0.0.1:7890 或 http://127.0.0.1:7890"
+                    value={form.proxy_url}
+                    onChange={(e) => setForm({ ...form, proxy_url: e.target.value })}
+                  />
+                </Field>
+              )}
+            </div>
+            {form.proxy_mode === "auto" && (
+              <p className="hint" style={{ marginTop: 0 }}>
+                自动探测顺序：环境变量 → 本机常见代理端口（7890 / 7897 / 1080 / 10809，兼容
+                mihomo、Clash、v2rayN 等）。若使用 mihomo 等不设系统代理的内核，保持本模式即可自动走代理。
+              </p>
+            )}
+
             <Field label="全量测速样本域名（每行一个）">
               <textarea
                 rows={6}
@@ -338,6 +393,31 @@ export default function SettingsPage({ ctx }: { ctx: AppCtx }) {
           </button>
         }
       >
+        {proxyStatus && (
+          <div className="row" style={{ gap: 10, marginBottom: 12, alignItems: "center" }}>
+            <span className="hint">出站代理：</span>
+            {proxyStatus.mode === "off" ? (
+              <span className="badge badge-neutral">已关闭（直连）</span>
+            ) : proxyStatus.effective_url ? (
+              <>
+                <span className="badge badge-low">走代理</span>
+                <span className="mono hint">{proxyStatus.effective_url}</span>
+              </>
+            ) : (
+              <>
+                <span className="badge badge-neutral">未检测到代理（直连）</span>
+                <span className="hint">
+                  用 mihomo 等裸内核时请确认代理混合端口已开启（默认 7890）
+                </span>
+              </>
+            )}
+            {proxyStatus.mode !== "off" && proxyStatus.resolved_url && (
+              <button className="btn btn-sm" onClick={() => void toggleProxy()}>
+                {proxyStatus.enabled ? "暂用直连" : "恢复走代理"}
+              </button>
+            )}
+          </div>
+        )}
         {dataProgress && (
           <div style={{ marginBottom: 12 }}>
             <ProgressBar done={dataProgress.done} total={dataProgress.total} label={dataProgress.name} />

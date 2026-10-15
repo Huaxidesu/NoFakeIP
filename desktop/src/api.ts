@@ -15,6 +15,7 @@ import type {
   DomainDiagnosis,
   DomainHistoryRow,
   FullBenchReport,
+  ProxyStatus,
   Recommendation,
   Settings,
   UpdateReport,
@@ -88,6 +89,9 @@ export const setSettings = (settings: Settings) =>
   call<void>("set_settings", { settings });
 export const getDataDir = () => call<string>("get_data_dir");
 export const getRecommendation = () => call<Recommendation | null>("get_recommendation");
+export const getProxyStatus = () => call<ProxyStatus>("get_proxy_status");
+export const setProxyEnabled = (enabled: boolean) =>
+  call<void>("set_proxy_enabled", { enabled });
 
 // —— 测速与诊断 ——
 

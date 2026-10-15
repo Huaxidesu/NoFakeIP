@@ -19,9 +19,10 @@ use tauri::Manager;
 // 这里显式 import 一次，既满足宏解析，也让调用点更简洁。
 use commands::{
     add_server, classify_domain, delete_server, detect_domain, export_servers, generate_report,
-    get_data_dir, get_recommendation, get_settings, get_status, import_servers, list_benchmarks,
-    list_data_sources, list_history, list_servers, run_benchmark, run_full_benchmark,
-    save_text_file, set_server_enabled, set_settings, update_data_sources, update_server,
+    get_data_dir, get_proxy_status, get_recommendation, get_settings, get_status, import_servers,
+    list_benchmarks, list_data_sources, list_history, list_servers, run_benchmark,
+    run_full_benchmark, save_text_file, set_proxy_enabled, set_server_enabled, set_settings,
+    update_data_sources, update_server,
 };
 
 /// 首次运行时把内置 DNS 节点写入数据库。
@@ -54,6 +55,18 @@ pub fn run() {
             let settings = state::load_settings(&storage);
             let st = AppState::new(data_dir, storage, settings)?;
             app.manage(st);
+
+            // 启动后台解析出站代理（环境变量 → 常见端口探测），完成后重建诊断器。
+            // 端口探测最坏约 2 秒，放后台不阻塞启动。
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                use commands::status::re_resolve_proxy;
+                let Some(state) = handle.try_state::<AppState>() else {
+                    return;
+                };
+                let settings = state.settings_snapshot();
+                re_resolve_proxy(&state, &settings).await;
+            });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -63,6 +76,8 @@ pub fn run() {
             get_settings,
             set_settings,
             get_data_dir,
+            get_proxy_status,
+            set_proxy_enabled,
             // 测速
             run_benchmark,
             run_full_benchmark,
