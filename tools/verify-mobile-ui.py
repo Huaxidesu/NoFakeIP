@@ -154,10 +154,12 @@ def main():
     # 因此断言改为：每个可见导航项的图标必须是 <svg>，且不含任何文字字形内容。
     icons = js("""JSON.stringify(Array.from(document.querySelectorAll('.nav-item'))
       .filter(e => e.offsetParent !== null)
-      .map(e => ({ label: e.querySelector('.nav-label-mobile').textContent.trim(),
-                   isSvg: e.querySelector('.nav-icon')?.tagName.toLowerCase() === 'svg',
-                   text: (e.querySelector('.nav-icon')?.textContent ?? '').trim(),
-                   cps: Array.from(e.querySelector('.nav-icon')?.textContent ?? '').map(c => c.codePointAt(0)) })))""")
+      .map(e => { const svg = e.querySelector('.nav-icon'); const b = svg ? svg.getBoundingClientRect() : null;
+                  return { label: e.querySelector('.nav-label-mobile').textContent.trim(),
+                   isSvg: svg?.tagName.toLowerCase() === 'svg',
+                   text: (svg?.textContent ?? '').trim(),
+                   cps: Array.from(svg?.textContent ?? '').map(c => c.codePointAt(0)),
+                   w: b ? Math.round(b.width) : 0, h: b ? Math.round(b.height) : 0 }; }))""")
     check("导航项数量与底栏一致", len(icons) == 4, f"实际 {len(icons)}：{[i['label'] for i in icons]}")
     check("导航图标全部为内联 SVG", all(i["isSvg"] for i in icons),
           str([(i["label"], i["isSvg"]) for i in icons]))
@@ -167,6 +169,11 @@ def main():
     check("导航图标不含彩色 emoji 码位",
           all(all(c < 0x1F000 for c in i["cps"]) for i in icons),
           str([(i["label"], [hex(c) for c in i["cps"]]) for i in icons]))
+    # 关键回归：内联 <svg> 只有 viewBox 时 width:auto 会塌成 0×0（真机上就是「图标不见了」）。
+    # 必须断言实际渲染尺寸 > 0，光看 tagName 是 <svg> 抓不到这个 bug。
+    check("导航图标实际渲染尺寸非 0（宽高均 ≥ 12px）",
+          all(i["w"] >= 12 and i["h"] >= 12 for i in icons),
+          str([(i["label"], i["w"], i["h"]) for i in icons]))
 
     print("\n=== 3. 首页主要操作 ===")
     home = js("""JSON.stringify({
@@ -186,6 +193,14 @@ def main():
           any(t["primary"] and t["title"] == "域名检测" for t in home["tiles"]), str(home["tiles"]))
     check("操作卡片高度 ≥ 70px", len(home["tiles"]) == 2 and all(t["h"] >= 70 for t in home["tiles"]),
           str([t["h"] for t in home["tiles"]]))
+    # 同类 bug：卡片图标也是内联 SVG，必须断言渲染尺寸非 0
+    quick_icons = js("""JSON.stringify(Array.from(document.querySelectorAll('.quick-icon'))
+      .filter(e => e.offsetParent !== null)
+      .map(e => { const s = e.querySelector('svg'); const b = s ? s.getBoundingClientRect() : null;
+                  return { isSvg: !!s, w: b ? Math.round(b.width) : 0, h: b ? Math.round(b.height) : 0 }; }))""")
+    check("首页操作卡片图标为 SVG 且渲染尺寸非 0",
+          len(quick_icons) == 2 and all(i["isSvg"] and i["w"] >= 12 and i["h"] >= 12 for i in quick_icons),
+          str([(i["isSvg"], i["w"], i["h"]) for i in quick_icons]))
     check("旧的右上角小按钮已移除", home["oldSmallButtons"] is False)
     over = home["mainScroll"] - home["mainClient"]
     check("首页内容不超出一屏（允许 ≤8px 取整误差）", over <= 8,
@@ -234,6 +249,13 @@ def main():
     check("「更多」列出 4 个入口",
           more_page["items"] == ["推荐与报告", "历史记录", "设置", "关于"], str(more_page["items"]))
     check("非底栏页面时底栏高亮「更多」", more_page["activeNav"] == "更多", str(more_page["activeNav"]))
+    menu_icons = js("""JSON.stringify(Array.from(document.querySelectorAll('.menu-icon'))
+      .filter(e => e.offsetParent !== null)
+      .map(e => { const s = e.querySelector('svg'); const b = s ? s.getBoundingClientRect() : null;
+                  return { isSvg: !!s, w: b ? Math.round(b.width) : 0, h: b ? Math.round(b.height) : 0 }; }))""")
+    check("「更多」页图标为 SVG 且渲染尺寸非 0",
+          len(menu_icons) == 4 and all(i["isSvg"] and i["w"] >= 12 and i["h"] >= 12 for i in menu_icons),
+          str([(i["isSvg"], i["w"], i["h"]) for i in menu_icons]))
 
     js("""(async () => {
       const t = Array.from(document.querySelectorAll('.menu-item'))

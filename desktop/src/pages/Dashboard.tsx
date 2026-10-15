@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import type { AppCtx } from "../App";
 import * as api from "../api";
 import { Card, ProgressBar, Spinner, Stat, useToast } from "../components/ui";
+import { Icon } from "../components/icons";
 import { startFullBench, useFullBench } from "../tasks";
 import type { Recommendation } from "../types";
 
@@ -74,7 +75,7 @@ export default function Dashboard({
       <div className="quick-start">
         <button className="quick-tile quick-tile-primary" onClick={() => onGoto("check")}>
           <span className="quick-icon" aria-hidden="true">
-            {"\u25CE"}
+            <Icon name="target" className="quick-icon-svg" />
           </span>
           <span className="quick-text">
             <span className="quick-title">域名检测</span>
@@ -87,7 +88,7 @@ export default function Dashboard({
 
         <button className="quick-tile" onClick={runFullBench} disabled={disabled}>
           <span className="quick-icon" aria-hidden="true">
-            {"\u26A1\uFE0E"}
+            <Icon name="bolt" className="quick-icon-svg" />
           </span>
           <span className="quick-text">
             <span className="quick-title">{running ? "测速中…" : "开始全量测速"}</span>

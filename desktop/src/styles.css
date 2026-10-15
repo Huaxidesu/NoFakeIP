@@ -157,11 +157,14 @@ body {
 }
 
 .nav-icon {
+  /* 图标是内联 <svg>：必须同时给宽高。
+     只给 width 而 height:auto 时，若 SVG 无 width/height 属性、
+     仅靠 viewBox，浏览器算不出内在高度 → 会塌成 0。 */
   width: 16px;
-  text-align: center;
+  height: 16px;
   flex: 0 0 16px;
-  /* 图标保持单色文字风格，不让 emoji 码位变成彩色 */
-  font-variant-emoji: text;
+  display: block;
+  color: inherit;
 }
 
 .sidebar-foot {
@@ -680,12 +683,18 @@ pre.code {
 }
 
 .quick-icon {
-  font-size: 24px;
-  line-height: 1;
-  flex: 0 0 auto;
+  /* 内联 <svg> 容器：固定尺寸，避免 width:auto 塌成 0 */
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  display: block;
   color: var(--accent);
-  /* 图标一律单色文字呈现，不跟随 emoji 变成彩色 */
-  font-variant-emoji: text;
+}
+
+.quick-icon-svg {
+  width: 26px;
+  height: 26px;
+  display: block;
 }
 
 .quick-text {
@@ -810,12 +819,18 @@ pre.code {
 }
 
 .menu-icon {
+  /* 内联 <svg> 必须同时给宽高，否则仅靠 viewBox 会塌成 0（见 .nav-icon 注释） */
   width: 22px;
+  height: 22px;
   flex: 0 0 22px;
-  text-align: center;
-  font-size: 17px;
+  display: block;
   color: var(--accent);
-  font-variant-emoji: text;
+}
+
+.menu-icon-svg {
+  width: 22px;
+  height: 22px;
+  display: block;
 }
 
 .menu-text {
@@ -947,10 +962,10 @@ pre.code {
   }
 
   .nav-icon {
-    width: auto;
-    flex: 0 0 auto;
-    font-size: 18px;
-    line-height: 1;
+    /* 窄屏是纵向布局，图标尺寸固定给死（不能用 auto，会塌成 0） */
+    width: 22px;
+    height: 22px;
+    flex: 0 0 22px;
   }
 
   .main {
@@ -973,7 +988,14 @@ pre.code {
   }
 
   .quick-icon {
-    font-size: 22px;
+    width: 24px;
+    height: 24px;
+    flex: 0 0 24px;
+  }
+
+  .quick-icon-svg {
+    width: 24px;
+    height: 24px;
   }
 
   .quick-title {
