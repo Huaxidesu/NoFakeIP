@@ -36,7 +36,7 @@
     ],
     "category": "Utility",
     "shortDescription": "DNS 诊断与测速工具",
-    "longDescription": "NoFakeIP 帮你测出哪家 DNS 在国内快、哪家解析国外域名干净，并检查本地 Fake-IP 是否正常。不生成也不修改任何 Clash / OpenClash 配置。",
+    "longDescription": "NoFakeIP 帮你测出哪家 DNS 在国内快、哪家解析国外域名干净，并检查本地 Fake-IP 是否正常。只做测量与判断，不生成也不修改任何软件配置。",
     "windows": {
       "nsis": {
         "languages": ["SimpChinese", "English"]

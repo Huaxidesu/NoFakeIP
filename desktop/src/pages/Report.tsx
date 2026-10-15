@@ -1,5 +1,5 @@
 // 推荐与报告页：展示推荐结论，并生成 Markdown / JSON / CSV 报告。
-// 注意：本页**不生成任何 Clash / OpenClash 配置**（见 doc/06-推荐与报告规格.md 第 4 节）。
+// 注意：本页只输出诊断报告，不生成任何代理软件配置（见 doc/06-推荐与报告规格.md 第 4 节）。
 
 import { useEffect, useState } from "react";
 import type { AppCtx } from "../App";
@@ -165,7 +165,7 @@ export default function Report(_props: { ctx: AppCtx }) {
           </button>
         </div>
         <p className="hint" style={{ marginTop: 10 }}>
-          提示：本工具只输出诊断报告，不生成也不修改任何 Clash / OpenClash 配置。
+          提示：本工具只输出诊断报告，不生成也不修改任何代理软件配置。
         </p>
       </Card>
 
