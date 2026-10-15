@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ⚠️ 环境适配补丁 E15（见 doc/11-构建发布与Android.md 第 2.9 节）
+  由 tools/build-android.sh 从 tools/android/themes.xml 覆盖写入。
+
+  浅色模式。深色见 values-night/themes.xml。
+
+  windowBackground 设成与前端 CSS 变量（名字是 bg）完全一致的颜色：
+  edge-to-edge 下，系统状态栏 / 手势条区域会露出窗口底色，
+  不设的话会露出 Material3 默认底色，与页面背景形成割裂的色块。
+
+  注意：XML 注释里不允许出现连续两个短横线，所以下文提到 CSS 变量时不带前缀。
+-->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Theme.nofakeip_desktop" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Customize your theme here. -->
+        <item name="android:windowBackground">#FFF6F7F9</item>
+    </style>
+</resources>

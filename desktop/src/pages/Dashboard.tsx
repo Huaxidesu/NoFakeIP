@@ -1,10 +1,19 @@
-// 首页：当前状态 + 全量测速入口 + 最近结果 + 推荐结论。
+// 首页：主要操作入口 + 状态摘要 + 推荐结论。
+//
+// 设计取舍（2026-10-15，需求方要求「按钮加大、内容缩小到一页」）：
+//   - 主要操作改成**大幅卡片**（桌面/窄屏都用同一套，窄屏自动竖排），
+//     替代原来挤在标题右上角的小按钮 —— 那个位置又小又不显眼；
+//   - 只保留「当前状态」与「推荐结论」两块摘要，数据库细节挪到「关于」页；
+//   - 完整的历史记录表格挪到「历史记录」页，首页不再堆表格，保证一屏内看完。
+//
+// 长任务状态放在 tasks.ts 的模块级 store 里：切换页面不会丢进度与结果。
 
 import { useEffect, useState } from "react";
 import type { AppCtx } from "../App";
 import * as api from "../api";
-import { Card, DataTable, ProgressBar, RegionBadge, RiskBadge, Stat, useToast, type Column } from "../components/ui";
-import type { BenchProgress, DomainHistoryRow, Recommendation } from "../types";
+import { Card, ProgressBar, Spinner, Stat, useToast } from "../components/ui";
+import { startFullBench, useFullBench } from "../tasks";
+import type { Recommendation } from "../types";
 
 export default function Dashboard({
   ctx,
@@ -14,70 +23,41 @@ export default function Dashboard({
   onGoto: (page: string) => void;
 }) {
   const toast = useToast();
-  const [recent, setRecent] = useState<DomainHistoryRow[]>([]);
-  const [rec, setRec] = useState<Recommendation | null>(null);
-  const [running, setRunning] = useState(false);
-  const [progress, setProgress] = useState<BenchProgress | null>(null);
+  const [fetchedRec, setFetchedRec] = useState<Recommendation | null>(null);
+  const full = useFullBench();
 
-  const load = async () => {
-    try {
-      const [h, r] = await Promise.all([api.listHistory(6), api.getRecommendation()]);
-      setRecent(h);
-      setRec(r);
-    } catch (e) {
-      toast(`读取历史失败：${(e as Error).message}`, "error");
-    }
-  };
+  // 本次会话刚跑完的结论优先于启动时拉到的旧结论
+  const rec = full.report?.recommendation ?? fetchedRec;
 
   useEffect(() => {
-    void load();
+    let alive = true;
+    api
+      .getRecommendation()
+      .then((r) => {
+        if (alive) setFetchedRec(r);
+      })
+      .catch((e) => toast(`读取推荐结论失败：${(e as Error).message}`, "error"));
+    return () => {
+      alive = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const startFullBench = async () => {
+  const running = full.running;
+  const disabled = running || !ctx.settings;
+
+  const runFullBench = () => {
     if (!ctx.settings) return;
-    setRunning(true);
-    setProgress({ done: 0, total: ctx.settings.sample_domains.length, current_domain: "" });
-    let unlisten: (() => void) | undefined;
-    try {
-      unlisten = await api.onBenchProgress((p) => setProgress(p));
-      const report = await api.runFullBenchmark({
+    void startFullBench(
+      {
         rounds: ctx.settings.rounds,
         timeout_secs: ctx.settings.timeout_secs,
         concurrency: ctx.settings.concurrency,
         domains: ctx.settings.sample_domains,
-      });
-      setRec(report.recommendation);
-      toast(
-        `全量测速完成：${report.results.length} 个域名，用时 ${(report.elapsed_ms / 1000).toFixed(1)}s`,
-        "ok",
-      );
-      await Promise.all([load(), ctx.refreshStatus()]);
-    } catch (e) {
-      toast(`测速失败：${(e as Error).message}`, "error");
-    } finally {
-      unlisten?.();
-      setRunning(false);
-      setProgress(null);
-    }
+      },
+      ctx.refreshStatus,
+    );
   };
-
-  const columns: Column<DomainHistoryRow>[] = [
-    { key: "domain", title: "域名", render: (r) => <span className="mono">{r.domain}</span> },
-    { key: "region", title: "归属", render: (r) => <RegionBadge region={r.region} /> },
-    {
-      key: "risk",
-      title: "风险",
-      render: (r) => (r.risk ? <RiskBadge risk={r.risk} /> : <span className="hint">—</span>),
-    },
-    { key: "fake", title: "Fake-IP", render: (r) => <span className="hint">{r.fake_ip ?? "—"}</span> },
-    {
-      key: "ips",
-      title: "最近解析",
-      render: (r) => <span className="mono hint">{r.last_ips.join(", ") || "—"}</span>,
-    },
-    { key: "count", title: "次数", align: "right", render: (r) => r.query_count, sortValue: (r) => r.query_count },
-  ];
 
   const s = ctx.status;
 
@@ -86,39 +66,57 @@ export default function Dashboard({
       <div className="page-head">
         <div>
           <h1 className="page-title">首页</h1>
-          <p className="page-desc">
-            NoFakeIP 帮你测出哪家 DNS 在国内快、哪家解析国外域名干净，并检查本地 Fake-IP 是否正常。
-          </p>
-        </div>
-        <div className="btn-row">
-          <button className="btn" onClick={() => onGoto("check")}>
-            单域名检测
-          </button>
-          <button className="btn btn-primary" onClick={startFullBench} disabled={running || !ctx.settings}>
-            {running ? "测速中…" : "开始全量测速"}
-          </button>
+          <p className="page-desc">测出哪家 DNS 在国内快、哪家解析国外域名干净，并检查本地 Fake-IP。</p>
         </div>
       </div>
 
-      {running && progress && (
+      {/* 主要操作：大幅卡片，桌面并排、窄屏竖排 */}
+      <div className="quick-start">
+        <button className="quick-tile quick-tile-primary" onClick={() => onGoto("check")}>
+          <span className="quick-icon" aria-hidden="true">
+            {"\u25CE"}
+          </span>
+          <span className="quick-text">
+            <span className="quick-title">域名检测</span>
+            <span className="quick-desc">输入一个域名，看它解析干不干净、有没有被污染</span>
+          </span>
+          <span className="quick-arrow" aria-hidden="true">
+            {"\u203A"}
+          </span>
+        </button>
+
+        <button className="quick-tile" onClick={runFullBench} disabled={disabled}>
+          <span className="quick-icon" aria-hidden="true">
+            {"\u26A1\uFE0E"}
+          </span>
+          <span className="quick-text">
+            <span className="quick-title">{running ? "测速中…" : "开始全量测速"}</span>
+            <span className="quick-desc">
+              {running && full.progress
+                ? `已完成 ${full.progress.done}/${full.progress.total}`
+                : "把全部已启用节点跑一遍，生成推荐结论"}
+            </span>
+          </span>
+          <span className="quick-arrow" aria-hidden="true">
+            {running ? <Spinner /> : "\u203A"}
+          </span>
+        </button>
+      </div>
+
+      {running && full.progress && (
         <Card title="测速进度">
-          <ProgressBar done={progress.done} total={progress.total} label={progress.current_domain} />
+          <ProgressBar done={full.progress.done} total={full.progress.total} label={full.progress.current_domain} />
         </Card>
       )}
 
       <Card title="当前状态">
-        <div className="grid grid-4">
+        <div className="grid grid-3">
           <Stat
-            label="已启用 DNS 节点"
+            label="DNS 节点"
             value={`${s?.enabled_count ?? 0} / ${s?.server_count ?? 0}`}
-            sub="可在「设置」中增删"
+            sub="已启用 / 全部"
           />
           <Stat label="已记录域名" value={s?.stats.domains ?? 0} sub={`测速记录 ${s?.stats.benchmarks ?? 0} 条`} />
-          <Stat
-            label="数据库"
-            value={`schema v${s?.stats.schema_version ?? "-"}`}
-            sub={<span className="mono">{s?.data_dir ?? ""}</span>}
-          />
           <Stat
             label="上次全量测速"
             value={s?.last_bench_at ? new Date(s.last_bench_at).toLocaleString() : "从未"}
@@ -127,61 +125,37 @@ export default function Dashboard({
         </div>
       </Card>
 
-      <div className="grid grid-2">
-        <Card
-          title="推荐结论"
-          actions={
-            <button className="btn btn-sm" onClick={() => onGoto("report")}>
-              查看报告
-            </button>
-          }
-        >
-          {rec ? (
-            <>
-              <div className="grid grid-2" style={{ gap: 10 }}>
-                <Stat
-                  label="国内场景"
-                  value={rec.china ? rec.china.name : "无可用"}
-                  sub={rec.china ? `平均 ${rec.china.avg_ms.toFixed(0)}ms` : "请先做一次全量测速"}
-                />
-                <Stat
-                  label="国外场景"
-                  value={rec.foreign ? rec.foreign.name : "无可用"}
-                  sub={rec.foreign ? `平均 ${rec.foreign.avg_ms.toFixed(0)}ms` : "请先做一次全量测速"}
-                />
-              </div>
-              <ul className="reasons" style={{ marginTop: 12 }}>
-                {rec.reasons.slice(0, 3).map((r, i) => (
-                  <li key={i}>{r}</li>
-                ))}
-              </ul>
-            </>
-          ) : (
-            <div className="empty">
-              还没有推荐结论，点击右上角「开始全量测速」跑一次即可生成。
+      <Card
+        title="推荐结论"
+        actions={
+          <button className="btn btn-sm" onClick={() => onGoto("report")}>
+            查看报告
+          </button>
+        }
+      >
+        {rec ? (
+          <>
+            <div className="grid grid-2 rec-stats">
+              <Stat
+                label="国内场景"
+                value={rec.china ? rec.china.name : "无可用"}
+                sub={rec.china ? `平均 ${rec.china.avg_ms.toFixed(0)}ms` : "请先做一次全量测速"}
+              />
+              <Stat
+                label="国外场景"
+                value={rec.foreign ? rec.foreign.name : "无可用"}
+                sub={rec.foreign ? `平均 ${rec.foreign.avg_ms.toFixed(0)}ms` : "请先做一次全量测速"}
+              />
             </div>
-          )}
-        </Card>
-
-        <Card title="说明">
-          <ul className="reasons">
-            <li>
-              本工具只做<b>测量与判断</b>，不会生成或修改任何 Clash / OpenClash 配置。
-            </li>
-            <li>延迟来自完整协议栈（UDP / TCP / DoT / DoH），不是 ping。</li>
-            <li>若检测到本机处于 Fake-IP 环境，明文 DNS 的结果会被本地劫持，建议看 DoH/DoT 的结果。</li>
-            <li>所有数据保存在本机 SQLite，不会上传。</li>
-          </ul>
-        </Card>
-      </div>
-
-      <Card title="最近测试结果">
-        <DataTable
-          columns={columns}
-          rows={recent}
-          empty="还没有测试记录，点击「开始全量测速」或「单域名检测」开始"
-          rowKey={(r) => r.domain}
-        />
+            <ul className="reasons">
+              {rec.reasons.slice(0, 2).map((r, i) => (
+                <li key={i}>{r}</li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <div className="empty">还没有推荐结论，点上面的「开始全量测速」跑一次即可生成。</div>
+        )}
       </Card>
     </>
   );

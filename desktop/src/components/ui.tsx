@@ -1,8 +1,8 @@
 // 通用 UI 组件。不引第三方 UI 库，保持轻量（见 doc/08-GUI规格.md 第 1 节）。
 
-import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
-import type { FakeIpStatus, Region, RiskLevel } from "../types";
-import { FAKE_IP_LABEL, REGION_LABEL, RISK_LABEL } from "../types";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import type { FakeIpStatus, Region, RiskLevel, ServerBenchResult } from "../types";
+import { FAKE_IP_LABEL, PROTOCOL_LABEL, REGION_LABEL, RISK_LABEL } from "../types";
 
 // —————————————————————— 卡片 ——————————————————————
 
@@ -150,6 +150,62 @@ export function DataTable<T>({
   );
 }
 
+// —————————————————————— 窄屏结果卡片 ——————————————————————
+
+/**
+ * DNS 测速结果的窄屏呈现。
+ *
+ * 为什么不用表格：结果有 8 列，在 360px 宽的手机上必然要左右滑动才能看全，
+ * 用户反馈"显示不全"。窄屏改成每台服务器一张卡片，信息分层纵向排布，
+ * 不需要横向滚动；宽屏仍然用表格（信息密度更高）。
+ */
+export function ServerResultCards({
+  rows,
+  showDomain = false,
+  empty = "暂无结果",
+}: {
+  rows: (ServerBenchResult & { domain?: string })[];
+  showDomain?: boolean;
+  empty?: string;
+}) {
+  if (rows.length === 0) return <div className="empty">{empty}</div>;
+  return (
+    <div className="result-cards">
+      {rows.map((r, i) => (
+        <div className="result-card" key={`${r.domain ?? ""}-${r.server_id}-${r.server_name}-${i}`}>
+          <div className="result-card-head">
+            <span className="result-card-name">{r.server_name}</span>
+            <LatencyBadge ms={r.avg_ms} ok={r.ok} />
+          </div>
+
+          <div className="result-card-tags">
+            <span className="badge badge-neutral">{PROTOCOL_LABEL[r.protocol]}</span>
+            <RegionBadge region={r.region} />
+            {r.ok ? (
+              <span className="badge badge-low">正常</span>
+            ) : (
+              <span className="badge badge-neutral">{r.error ?? "失败"}</span>
+            )}
+          </div>
+
+          {showDomain && r.domain && <div className="result-card-line mono hint">{r.domain}</div>}
+
+          {r.ok && (
+            <div className="result-card-line hint">
+              连接 {r.connect_ms.toFixed(0)}
+              {r.tls_ms > 0 ? ` · TLS ${r.tls_ms.toFixed(0)}` : ""}
+              {" · 查询 "}
+              {r.query_ms.toFixed(0)} ms
+            </div>
+          )}
+
+          <div className="result-card-line mono hint">{r.answers.length ? r.answers.join(", ") : "—"}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // —————————————————————— 其它 ——————————————————————
 
 export function Spinner() {
@@ -239,6 +295,19 @@ interface ToastItem {
 
 const ToastCtx = createContext<(text: string, kind?: ToastKind) => void>(() => {});
 
+/**
+ * 模块级 toast 出口，给**非 React 代码**用（例如 `tasks.ts` 里的长任务）。
+ *
+ * 为什么需要：长任务在页面被卸载后仍会跑完，此时不能依赖页面里的 `useToast()`
+ * 去弹提示；这里由 `ToastProvider` 注册一个全局出口，任务结束时无论用户
+ * 当前停在哪个页面都能收到提示。
+ */
+let toastSink: ((text: string, kind?: ToastKind) => void) | null = null;
+
+export function notify(text: string, kind: ToastKind = "info") {
+  toastSink?.(text, kind);
+}
+
 export function useToast() {
   return useContext(ToastCtx);
 }
@@ -252,6 +321,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     // 错误多留一会儿，方便阅读
     window.setTimeout(() => setItems((prev) => prev.filter((t) => t.id !== id)), kind === "error" ? 9000 : 4500);
   }, []);
+
+  useEffect(() => {
+    toastSink = push;
+    return () => {
+      toastSink = null;
+    };
+  }, [push]);
 
   return (
     <ToastCtx.Provider value={push}>

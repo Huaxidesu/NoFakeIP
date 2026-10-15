@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ⚠️ 环境适配补丁 E8（见 doc/11-构建发布与Android.md 第 2.5 节）
+  由 tools/build-android.sh 从 tools/android/network_security_config.xml 覆盖写入。
+
+  背景：Tauri 的 Android 模板在 release 构建里把 manifest 占位符
+  usesCleartextTraffic 设为 false，即默认禁止明文 HTTP。
+  但本项目「在线 IP 归属地查询」用的是 ip-api.com 的免费接口，
+  该接口只提供 http://（https 需付费），在 release 包里会被系统直接拦截。
+
+  处理：用网络安全配置只对 ip-api.com 放行明文流量，其余域名仍强制 HTTPS。
+  注意：存在 networkSecurityConfig 时，manifest 的 usesCleartextTraffic 会被忽略，
+  因此这里显式声明 base-config 保持默认拒绝，语义与模板一致。
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">ip-api.com</domain>
+    </domain-config>
+</network-security-config>

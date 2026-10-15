@@ -348,29 +348,6 @@ export default function SettingsPage({ ctx }: { ctx: AppCtx }) {
           更新失败时会<b>保留</b>本地已有数据，不会做破坏性写入。数据源与镜像策略见 doc/14-数据源与更新.md。
         </p>
       </Card>
-
-      <Card title="关于">
-        <div className="row" style={{ gap: 24 }}>
-          <div>
-            <div className="stat-label">版本</div>
-            <div className="mono">v{ctx.status?.version ?? "—"}</div>
-          </div>
-          <div className="grow">
-            <div className="stat-label">数据目录</div>
-            <div className="mono hint">{ctx.status?.data_dir ?? "—"}</div>
-          </div>
-          <div>
-            <div className="stat-label">数据库</div>
-            <div className="mono hint">
-              schema v{ctx.status?.stats.schema_version ?? "-"} · 测速记录 {ctx.status?.stats.benchmarks ?? 0}
-            </div>
-          </div>
-        </div>
-        <p className="hint" style={{ marginTop: 12 }}>
-          NoFakeIP 只做 DNS 测量与判断，不生成、不修改任何 Clash / OpenClash / Clash Verge 配置。
-          所有数据保存在本机，不会上传。
-        </p>
-      </Card>
     </>
   );
 }

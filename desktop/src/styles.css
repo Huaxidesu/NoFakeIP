@@ -58,6 +58,8 @@
 
 * {
   box-sizing: border-box;
+  /* 移动端去掉点击时的高亮方块，观感更接近原生 */
+  -webkit-tap-highlight-color: transparent;
 }
 
 html,
@@ -65,6 +67,8 @@ body,
 #root {
   height: 100%;
   margin: 0;
+  /* WebView 里禁掉下拉刷新与橡皮筋回弹，避免和页面内滚动打架 */
+  overscroll-behavior: none;
 }
 
 body {
@@ -103,17 +107,12 @@ body {
   padding: 4px 8px 14px;
 }
 
-.brand-mark {
+.brand-logo {
   width: 26px;
   height: 26px;
   border-radius: 7px;
-  background: linear-gradient(135deg, var(--accent), var(--secondary));
-  display: grid;
-  place-items: center;
-  color: #fff;
-  font-weight: 700;
-  font-size: 13px;
   flex: 0 0 auto;
+  display: block;
 }
 
 .brand-name {
@@ -153,10 +152,16 @@ body {
   font-weight: 600;
 }
 
+.nav-label-mobile {
+  display: none;
+}
+
 .nav-icon {
   width: 16px;
   text-align: center;
   flex: 0 0 16px;
+  /* 图标保持单色文字风格，不让 emoji 码位变成彩色 */
+  font-variant-emoji: text;
 }
 
 .sidebar-foot {
@@ -225,6 +230,10 @@ body {
 
 .grid-4 {
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+
+.grid-3 {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
 
 .stat-label {
@@ -614,40 +623,455 @@ pre.code {
   }
 }
 
+/* —— 首页主要操作：大幅卡片 —— */
+
+.quick-start {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.quick-tile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 84px;
+  padding: 16px 18px;
+  text-align: left;
+  font: inherit;
+  color: var(--fg);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+}
+
+.quick-tile:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.quick-tile:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 域名检测是最常用的入口，用实心主色让它第一眼就能看到 */
+.quick-tile-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+}
+
+.quick-tile-primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.quick-tile-primary .quick-icon,
+.quick-tile-primary .quick-arrow {
+  color: var(--accent-fg);
+}
+
+.quick-tile-primary .quick-desc {
+  color: var(--accent-fg);
+  opacity: 0.85;
+}
+
+.quick-icon {
+  font-size: 24px;
+  line-height: 1;
+  flex: 0 0 auto;
+  color: var(--accent);
+  /* 图标一律单色文字呈现，不跟随 emoji 变成彩色 */
+  font-variant-emoji: text;
+}
+
+.quick-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.quick-title {
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.quick-desc {
+  font-size: 12px;
+  color: var(--fg-dim);
+  line-height: 1.4;
+}
+
+.quick-arrow {
+  font-size: 20px;
+  color: var(--fg-dim);
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+}
+
+/* —— 长任务进行中的全局提示条 —— */
+
+.task-banner {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--bg-elev);
+  box-shadow: var(--shadow);
+  font-size: 12.5px;
+}
+
+/* —— 窄屏结果卡片（替代需要左右滑动的表格） —— */
+
+.result-cards {
+  display: grid;
+  gap: 10px;
+}
+
+.result-card {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elev);
+  padding: 10px 12px;
+}
+
+.result-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.result-card-name {
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.result-card-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.result-card-line {
+  font-size: 11.5px;
+  word-break: break-all;
+}
+
+/* —— 只在某一端渲染的内容 —— */
+
+.mobile-only {
+  display: none;
+}
+
+/* —— 「更多」页菜单 —— */
+
+.menu-list {
+  display: grid;
+  gap: 10px;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: var(--fg);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 14px 16px;
+  cursor: pointer;
+}
+
+.menu-item:hover {
+  border-color: var(--accent);
+}
+
+.menu-icon {
+  width: 22px;
+  flex: 0 0 22px;
+  text-align: center;
+  font-size: 17px;
+  color: var(--accent);
+  font-variant-emoji: text;
+}
+
+.menu-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.menu-title {
+  font-weight: 600;
+}
+
+.menu-desc {
+  font-size: 12px;
+  color: var(--fg-dim);
+}
+
+.menu-arrow {
+  color: var(--fg-dim);
+  font-size: 18px;
+  flex: 0 0 auto;
+}
+
+/* —— 关于页 —— */
+
+.about-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.about-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  flex: 0 0 auto;
+}
+
+.about-name {
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.about-version {
+  font-size: 12.5px;
+  color: var(--fg-dim);
+}
+
+.about-desc {
+  margin: 14px 0 0;
+  color: var(--fg-muted);
+  font-size: 13px;
+}
+
+.about-path {
+  margin-top: 14px;
+}
+
+/* 导航项的显示范围：桌面侧栏列全部页面，窄屏底栏只列 4 项 */
+.nav-mobile-only {
+  display: none;
+}
+
 /* —— Android / 窄屏：底部 Tab —— */
+
+/* 说明：系统栏（状态栏 / 手势条 / 刘海）的安全区由原生侧处理，
+   见 tools/android/MainActivity.kt（补丁 E15）。
+   Android WebView 不支持 CSS 的 env(safe-area-inset-*)，
+   所以这里不做安全区留白，只负责触摸体验。 */
 
 @media (max-width: 720px) {
   .app {
     flex-direction: column-reverse;
   }
 
+  /* 底栏用 flex + flex:1 1 0 等分：项数变化时自动适配，
+     不会像固定列数的 grid 那样写死（历史上就是这里出过溢出问题）。 */
   .sidebar {
     width: 100%;
     flex: 0 0 auto;
+    display: flex;
     flex-direction: row;
     border-right: none;
     border-top: 1px solid var(--border);
-    padding: 6px;
+    padding: 4px 6px;
     gap: 2px;
-    overflow-x: auto;
+    overflow: visible;
+    -webkit-user-select: none;
+    user-select: none;
   }
 
   .brand,
-  .sidebar-foot {
+  .sidebar-foot,
+  .nav-desktop-only {
     display: none;
   }
 
+  .nav-mobile-only {
+    display: flex;
+  }
+
   .nav-item {
+    width: auto;
+    min-width: 0;
+    min-height: 54px;
+    flex: 1 1 0;
     flex-direction: column;
-    gap: 2px;
-    font-size: 11px;
-    padding: 6px 8px;
-    flex: 1 0 auto;
+    gap: 3px;
+    padding: 6px 2px;
     justify-content: center;
     text-align: center;
+    border-radius: 10px;
+    font-size: 11px;
+    line-height: 1.2;
+  }
+
+  .nav-label-desktop {
+    display: none;
+  }
+
+  .nav-label-mobile {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .nav-icon {
+    width: auto;
+    flex: 0 0 auto;
+    font-size: 18px;
+    line-height: 1;
   }
 
   .main {
-    padding: 14px 14px 24px;
+    padding: 12px 12px 16px;
+    /* 移动端惯性滚动 */
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 首页主要操作：窄屏竖排、点按目标更高 */
+  .quick-start {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .quick-tile {
+    min-height: 76px;
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .quick-icon {
+    font-size: 22px;
+  }
+
+  .quick-title {
+    font-size: 15px;
+  }
+
+  /* 宽屏表格 / 窄屏卡片二选一 */
+  .desktop-only {
+    display: none;
+  }
+
+  .mobile-only {
+    display: block;
+  }
+
+  .task-banner {
+    font-size: 12px;
+    padding: 7px 10px;
+    /* 窄屏放不下那句说明，只留进度 */
+    gap: 6px;
+  }
+
+  .task-banner .hint {
+    display: none;
+  }
+
+  /* 移动端按钮给足高度 */
+  .btn {
+    min-height: 40px;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  /* —— 紧凑排版：把首页压进一屏 —— */
+
+  .page-head {
+    margin-bottom: 12px;
+    align-items: flex-start;
+  }
+
+  .page-title {
+    font-size: 18px;
+  }
+
+  .page-desc {
+    font-size: 12px;
+    margin-top: 2px;
+  }
+
+  .card {
+    padding: 12px 14px;
+    margin-bottom: 12px;
+  }
+
+  .card-title {
+    font-size: 12px;
+    margin-bottom: 10px;
+  }
+
+  .grid {
+    gap: 12px;
+  }
+
+  /* 状态摘要固定三列一行，避免折成两行占高度 */
+  .grid-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  /* 四宫格在窄屏固定两列（默认的 minmax(170px) 在 360px 下会退化成单列，
+     关于页 / 报告页的指标会拉得很长） */
+  .grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .rec-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+  }
+
+  .stat-value {
+    font-size: 18px;
+  }
+
+  .stat-sub {
+    font-size: 10.5px;
+  }
+
+  .reasons {
+    margin-top: 10px;
+  }
+
+  .menu-item {
+    padding: 12px 14px;
   }
 }

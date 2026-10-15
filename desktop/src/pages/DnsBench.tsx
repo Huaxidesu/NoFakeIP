@@ -1,11 +1,25 @@
-// DNS 测速页：选域名 + 选节点 → 测速 → 表格 + 延迟对比图 + 导出 CSV。
+// DNS 测速页：选域名 + 选节点 → 测速 → 结果（宽屏表格 / 窄屏卡片）+ 延迟对比图 + 导出 CSV。
+//
+// 长任务状态（进行中 / 结果）与表单内容都在 tasks.ts 的模块级 store 里，
+// 切换页面不会中断任务，也不会丢掉已输入的内容。
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { AppCtx } from "../App";
 import * as api from "../api";
 import { EChart, themeColors } from "../components/EChart";
-import { Card, DataTable, Field, LatencyBadge, RegionBadge, Spinner, useToast, type Column } from "../components/ui";
-import type { DomainBenchResult, ServerBenchResult } from "../types";
+import {
+  Card,
+  DataTable,
+  Field,
+  LatencyBadge,
+  RegionBadge,
+  ServerResultCards,
+  Spinner,
+  useToast,
+  type Column,
+} from "../components/ui";
+import { startBench, updateBenchForm, useBench } from "../tasks";
+import type { ServerBenchResult } from "../types";
 import { PROTOCOL_LABEL } from "../types";
 
 interface Row extends ServerBenchResult {
@@ -14,27 +28,23 @@ interface Row extends ServerBenchResult {
 
 export default function DnsBench({ ctx }: { ctx: AppCtx }) {
   const toast = useToast();
-  const [domains, setDomains] = useState("www.baidu.com, github.com");
-  const [selected, setSelected] = useState<number[] | null>(null);
-  const [rounds, setRounds] = useState<number | null>(null);
-  const [timeoutSecs, setTimeoutSecs] = useState<number | null>(null);
-  const [running, setRunning] = useState(false);
-  const [results, setResults] = useState<DomainBenchResult[]>([]);
+  const bench = useBench();
+  const { domainsText, selected, rounds, timeoutSecs, running, results } = bench;
 
   const enabledServers = useMemo(() => ctx.servers.filter((s) => s.enabled), [ctx.servers]);
   const chosen = selected ?? enabledServers.map((s) => s.id);
 
   const toggle = (id: number) => {
     const next = chosen.includes(id) ? chosen.filter((x) => x !== id) : [...chosen, id];
-    setSelected(next);
+    updateBenchForm({ selected: next });
   };
 
-  const domainList = domains
+  const domainList = domainsText
     .split(/[\s,，;；]+/)
     .map((d) => d.trim())
     .filter(Boolean);
 
-  const run = async () => {
+  const run = () => {
     if (domainList.length === 0) {
       toast("请先输入至少一个域名", "warn");
       return;
@@ -43,22 +53,16 @@ export default function DnsBench({ ctx }: { ctx: AppCtx }) {
       toast("请至少选择一个 DNS 节点", "warn");
       return;
     }
-    setRunning(true);
-    try {
-      const r = await api.runBenchmark(domainList, chosen, {
+    void startBench(
+      domainList,
+      chosen,
+      {
         rounds: rounds ?? ctx.settings?.rounds ?? 3,
         timeout_secs: timeoutSecs ?? ctx.settings?.timeout_secs ?? 5,
         concurrency: ctx.settings?.concurrency ?? 16,
-      });
-      setResults(r);
-      const ok = r.reduce((n, d) => n + d.results.filter((s) => s.ok).length, 0);
-      toast(`测速完成：${r.length} 个域名，${ok} 条成功结果`, "ok");
-      await ctx.refreshStatus();
-    } catch (e) {
-      toast(`测速失败：${(e as Error).message}`, "error");
-    } finally {
-      setRunning(false);
-    }
+      },
+      ctx.refreshStatus,
+    );
   };
 
   const rows: Row[] = useMemo(
@@ -186,7 +190,11 @@ export default function DnsBench({ ctx }: { ctx: AppCtx }) {
 
       <Card title="测试参数">
         <Field label="域名（逗号或换行分隔）">
-          <textarea rows={2} value={domains} onChange={(e) => setDomains(e.target.value)} />
+          <textarea
+            rows={2}
+            value={domainsText}
+            onChange={(e) => updateBenchForm({ domainsText: e.target.value })}
+          />
         </Field>
         <div className="row" style={{ gap: 16 }}>
           <Field label="轮次">
@@ -196,7 +204,7 @@ export default function DnsBench({ ctx }: { ctx: AppCtx }) {
               max={10}
               style={{ width: 90 }}
               value={rounds ?? ctx.settings?.rounds ?? 3}
-              onChange={(e) => setRounds(Number(e.target.value))}
+              onChange={(e) => updateBenchForm({ rounds: Number(e.target.value) })}
             />
           </Field>
           <Field label="超时（秒）">
@@ -206,7 +214,7 @@ export default function DnsBench({ ctx }: { ctx: AppCtx }) {
               max={30}
               style={{ width: 90 }}
               value={timeoutSecs ?? ctx.settings?.timeout_secs ?? 5}
-              onChange={(e) => setTimeoutSecs(Number(e.target.value))}
+              onChange={(e) => updateBenchForm({ timeoutSecs: Number(e.target.value) })}
             />
           </Field>
           <div className="hint">
@@ -242,13 +250,19 @@ export default function DnsBench({ ctx }: { ctx: AppCtx }) {
       )}
 
       <Card title="测速结果">
-        <DataTable
-          columns={columns}
-          rows={rows}
-          empty="还没有结果，填好参数后点击「开始测试」"
-          initialSortKey="latency"
-          rowKey={(r) => `${r.domain}-${r.server_id}-${r.server_name}`}
-        />
+        {/* 宽屏：表格信息密度高；窄屏：卡片，避免左右滑动才能看全 */}
+        <div className="desktop-only">
+          <DataTable
+            columns={columns}
+            rows={rows}
+            empty="还没有结果，填好参数后点击「开始测试」"
+            initialSortKey="latency"
+            rowKey={(r) => `${r.domain}-${r.server_id}-${r.server_name}`}
+          />
+        </div>
+        <div className="mobile-only">
+          <ServerResultCards rows={rows} showDomain empty="还没有结果，填好参数后点击「开始测试」" />
+        </div>
       </Card>
     </>
   );
