@@ -148,17 +148,25 @@ def main():
     check("底栏每项触控宽度 ≥ 72px", all(x["w"] >= 72 for x in nav["visible"]), str([x["w"] for x in nav["visible"]]))
 
     print("\n=== 2. 导航图标风格 ===")
+    # 图标已于 2026-10-15 改为**内联 SVG**（components/icons.tsx）：
+    # 此前用 ⚡(U+26A1) / ⚙(U+2699) 字符，属 emoji 码位，Android 上会渲染成
+    # 彩色表情（补 U+FE0E 也压不住），且依赖系统字体覆盖。
+    # 因此断言改为：每个可见导航项的图标必须是 <svg>，且不含任何文字字形内容。
     icons = js("""JSON.stringify(Array.from(document.querySelectorAll('.nav-item'))
       .filter(e => e.offsetParent !== null)
       .map(e => ({ label: e.querySelector('.nav-label-mobile').textContent.trim(),
-                   cp: Array.from(e.querySelector('.nav-icon').textContent).map(c => c.codePointAt(0)) })))""")
-    # 彩色 emoji 都在 U+1F000 以上；⚡(26A1) / ⚙(2699) 属于 emoji 码位，
-    # 必须跟 U+FE0E 变体选择符才能强制文字呈现。
-    check("没有彩色 emoji 图标", all(i["cp"][0] < 0x1F000 for i in icons), str([i["label"] for i in icons]))
-    need_vs = [i for i in icons if i["cp"][0] in (0x26A1, 0x2699)]
-    check("emoji 码位图标已带 U+FE0E 变体选择符",
-          len(need_vs) >= 1 and all(0xFE0E in i["cp"] for i in need_vs),
-          str([(i["label"], [hex(c) for c in i["cp"]]) for i in need_vs]))
+                   isSvg: e.querySelector('.nav-icon')?.tagName.toLowerCase() === 'svg',
+                   text: (e.querySelector('.nav-icon')?.textContent ?? '').trim(),
+                   cps: Array.from(e.querySelector('.nav-icon')?.textContent ?? '').map(c => c.codePointAt(0)) })))""")
+    check("导航项数量与底栏一致", len(icons) == 4, f"实际 {len(icons)}：{[i['label'] for i in icons]}")
+    check("导航图标全部为内联 SVG", all(i["isSvg"] for i in icons),
+          str([(i["label"], i["isSvg"]) for i in icons]))
+    check("导航图标不含文字字形（无 emoji / 字符图标）",
+          all(i["text"] == "" for i in icons),
+          str([(i["label"], i["text"]) for i in icons]))
+    check("导航图标不含彩色 emoji 码位",
+          all(all(c < 0x1F000 for c in i["cps"]) for i in icons),
+          str([(i["label"], [hex(c) for c in i["cps"]]) for i in icons]))
 
     print("\n=== 3. 首页主要操作 ===")
     home = js("""JSON.stringify({
@@ -243,6 +251,18 @@ def main():
     check("关于页可打开", about["title"] == "关于", str(about["title"]))
     check("关于页显示应用图标", about["hasLogo"] is True)
     check("关于页已删除 Clash 说明文字", "Clash" not in about["text"])
+
+    # 全量扫描：推荐与报告页等其它页面也不应出现 Clash 字样
+    js("""(async () => {
+      const t = Array.from(document.querySelectorAll('.menu-item, .nav-item'));
+      const report = t.find(e => ((e.querySelector('.menu-title, .nav-label, .nav-label-mobile')?.textContent) || '').includes('报告'));
+      if (report) report.click();
+      await new Promise(r => setTimeout(r, 300));
+      return 'ok';
+    })()""", await_promise=True)
+    time.sleep(0.6)
+    report_text = js("""document.body.innerText""")
+    check("报告页已删除 Clash 说明文字", "Clash" not in report_text)
 
     print("\n=== 6. 域名检测 ===")
     check("能点到「检测」", click_mobile_nav("检测") is True)
