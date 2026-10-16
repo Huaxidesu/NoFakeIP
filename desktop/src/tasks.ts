@@ -170,7 +170,9 @@ const detectStore = createStore<DetectState>({
   loading: false,
   diag: null,
   error: null,
-  domainText: "github.com",
+  // 输入框默认留空：界面用「虚化的 github + .com 后缀」提示默认值，
+  // 留空即检测 github.com（见 DomainCheck 页的 effectiveDomain）
+  domainText: "",
 });
 
 export const useDetect = () => useStore(detectStore);

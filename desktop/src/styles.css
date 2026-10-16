@@ -382,6 +382,45 @@ textarea:focus {
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
+/* —— 域名输入框：虚化占位 + 固定后缀（留空即 github.com） —— */
+
+.domain-field {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  padding: 0 9px;
+}
+
+.domain-field:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.domain-field input[type="text"] {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 6px 0;
+  box-shadow: none;
+}
+
+.domain-field input[type="text"]:focus {
+  border: none;
+  box-shadow: none;
+}
+
+/* 后缀（.com）与虚化占位同一档灰度，视觉上属于输入框的一部分 */
+.domain-field-suffix {
+  color: var(--fg-dim);
+  font-size: 13px;
+  user-select: none;
+}
+
 textarea {
   font-family: var(--mono);
   font-size: 12.5px;
