@@ -26,11 +26,8 @@ export default function DomainCheck({ ctx }: { ctx: AppCtx }) {
   const detect = useDetect();
   const { domainText: domain, loading, diag } = detect;
 
-  // 输入框留空 → 检测 github.com；输入内容不含点 → 自动补 .com 后缀
-  // （输入框右侧显示的 .com 就是这个后缀；输入完整域名时后缀自动隐藏）
-  const typed = domain.trim();
-  const showComSuffix = !typed.includes(".");
-  const effectiveDomain = typed ? (typed.includes(".") ? typed : `${typed}.com`) : "github.com";
+  // 输入框留空 → 检测 github.com；输入任意字符则完全覆盖（不做后缀拼接）
+  const effectiveDomain = domain.trim() || "github.com";
 
   // 在线归属地开启时展示出站代理状态（帮助 mihomo 等裸内核用户理解联网状态）
   const onlineGeo = ctx.settings?.online_geo ?? false;
@@ -97,20 +94,17 @@ export default function DomainCheck({ ctx }: { ctx: AppCtx }) {
 
       <Card>
         <div className="row">
-          {/* 留空即 github.com：占位「github」虚化显示，后缀 .com 固定；
-              输入完整域名（含点）时后缀自动隐藏 */}
-          <div className="domain-field">
-            <input
-              type="text"
-              placeholder="github"
-              value={domain}
-              onChange={(e) => setDetectDomain(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") run();
-              }}
-            />
-            {showComSuffix && <span className="domain-field-suffix">.com</span>}
-          </div>
+          {/* 留空即 github.com：整体作为虚化占位，输入任意字符即完全覆盖 */}
+          <input
+            type="text"
+            className="grow"
+            placeholder="github.com"
+            value={domain}
+            onChange={(e) => setDetectDomain(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") run();
+            }}
+          />
           <span className="hint">
             将使用 {ctx.servers.filter((s) => s.enabled).length} 个已启用节点做交叉比对
           </span>
