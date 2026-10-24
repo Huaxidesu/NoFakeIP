@@ -1,11 +1,11 @@
 //! 诊断报告生成与导出。
 //!
 //! 提供三种格式：
-//! - **Markdown**：给人看（可复制到 issue / 笔记）
-//! - **JSON**：给程序看（CLI `--json`、GUI 导出，字段只增不减）
-//! - **CSV**：给表格看（委托 [`crate::benchmark::export_csv`]）
+//! - Markdown：给人看（可复制到 issue / 笔记）
+//! - JSON：给程序看（CLI `--json`、GUI 导出，字段只增不减）
+//! - CSV：给表格看（委托 [`crate::benchmark::export_csv`]）
 //!
-//! **范围说明**：本模块只输出「诊断报告」，**不生成任何 Clash / OpenClash 配置**。
+//! 范围说明：本模块只输出「诊断报告」，不生成任何代理软件配置。
 
 use crate::benchmark::{self, DomainBenchResult};
 use crate::diagnose::DomainDiagnosis;

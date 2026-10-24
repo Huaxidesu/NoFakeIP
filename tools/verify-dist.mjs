@@ -13,7 +13,7 @@
 //   node tools/verify-dist.mjs            # 校验 desktop/dist
 //   在 tauri build / 打包 APK 之前跑一次；退出码非 0 表示产物不完整。
 //
-// 建议在 CI 里也跑一遍（见 .github/workflows/release.yml）。
+// 建议在 CI 中同样执行（见 .github/workflows/release.yml）。
 
 import { readFileSync, existsSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";

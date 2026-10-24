@@ -1,8 +1,8 @@
 //! NoFakeIP Core Engine
 //!
-//! 面向 OpenClash / Clash Meta Fake-IP 用户的智能 DNS 诊断引擎。
+//! 面向使用 Fake-IP 模式代理软件用户的智能 DNS 诊断引擎。
 //!
-//! 设计约束（见《NoFakeIP 开发任务书》第一节）：
+//! 设计约束：
 //! - 核心不依赖任何 GUI 框架；
 //! - 所有核心逻辑使用 Rust 实现；
 //! - 可被 Desktop / Android / CLI / 未来插件复用。
@@ -20,7 +20,7 @@
 //! - [`storage`]    SQLite 持久化
 //! - [`models`]     跨模块共享数据模型
 //!
-//! **范围说明**：本工具**不生成、不修改**任何 Clash / OpenClash / Clash Verge 配置。
+//! 范围说明：本工具不生成、不修改任何代理软件配置。
 //! 它只负责「测出来、查清楚、给出建议」，配置怎么写由用户自己决定。
 
 pub mod benchmark;
@@ -43,5 +43,5 @@ pub use error::{CoreError, Result};
 /// 引擎版本号（同时暴露给 GUI / CLI）。
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-/// 默认 Fake-IP 地址段（Clash / Clash Meta 默认值）。
+/// 默认 Fake-IP 地址段（常见代理软件 Fake-IP 模式的默认值）。
 pub const DEFAULT_FAKE_IP_RANGE: &str = "198.18.0.0/15";

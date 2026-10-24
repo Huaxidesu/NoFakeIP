@@ -2,7 +2,7 @@
 //!
 //! 设计约定（见 `doc/08-GUI规格.md` 第 3 节）：
 //! - 所有 command 返回 `Result<T, String>`（Rust 错误统一 `to_string()`）；
-//! - 本层**只做参数转换与状态存取**，业务逻辑一律在 `nofakeip-core` 中实现；
+//! - 本层只做参数转换与状态存取，业务逻辑一律在 `nofakeip-core` 中实现；
 //! - 长任务通过 Tauri event 推送进度（`bench:progress` / `data:progress`）。
 
 pub mod bench;

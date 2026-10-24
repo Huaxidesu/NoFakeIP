@@ -1,7 +1,7 @@
 //! DNS 污染与 Fake-IP 异常检测。
 //!
 //! 12 项检测与风险分级算法见 `doc/05-污染与FakeIP检测规格.md`。
-//! 关键区分：**Fake-IP 命中不是污染**，而是「本地 Fake-IP 正常工作」的证据。
+//! 关键区分：Fake-IP 命中不是污染，而是「本地 Fake-IP 正常工作」的证据。
 
 use crate::data::BuiltinData;
 use crate::error::Result;

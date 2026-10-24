@@ -3,7 +3,7 @@
 //! 判定优先级与置信度算法见 `doc/04-域名分类规格.md`：
 //! `用户覆盖(1.00) → 本地规则库(0.95) → TLD 弱规则(0.75) → IP 归属地(0.60~0.85) → 默认(0.30)`。
 //!
-//! 冲突消解：**最长规则优先，同长度时国内优先**（把国内站点误判成国外会走 fallback 导致慢）。
+//! 冲突消解：最长规则优先，同长度时国内优先（把国内站点误判成国外会走 fallback 导致慢）。
 
 use crate::data::BuiltinData;
 use crate::error::Result;
@@ -66,7 +66,7 @@ pub struct DomainClassifier {
     wildcards: HashMap<String, Region>,
     /// 用户覆盖规则（精确 / 后缀匹配，优先级最高）
     user: HashMap<String, Region>,
-    /// 用户通配规则：`*.example.com`（**不匹配**裸域名本身）
+    /// 用户通配规则：`*.example.com`（不匹配裸域名本身）
     user_wildcards: HashMap<String, Region>,
     /// 国外 TLD 弱规则
     foreign_tlds: HashSet<String>,

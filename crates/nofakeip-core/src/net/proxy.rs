@@ -1,8 +1,8 @@
 //! 出站 HTTP 请求的代理支持。
 //!
-//! 目标用户：使用 mihomo / Clash 等裸内核、系统里没有系统代理的用户。
+//! 目标用户：使用裸内核代理软件、系统里没有系统代理的用户。
 //! 本模块只负责让 NoFakeIP 自身的联网请求（规则数据更新、在线归属地查询）
-//! 走用户指定的代理，**不生成、不修改任何代理软件的配置文件**。
+//! 走用户指定的代理，不生成、不修改任何代理软件的配置文件。
 //!
 //! 支持：
 //! - HTTP 代理（对 https 目标用 CONNECT 隧道，对 http 目标用绝对 URI）
@@ -22,7 +22,7 @@ use tokio::time::timeout;
 /// 代理协议类型。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ProxyScheme {
-    /// HTTP 代理（mihomo mixed-port 亦兼容）
+    /// HTTP 代理（常见代理软件的 mixed-port 亦兼容）
     Http,
     /// SOCKS5（无认证）
     Socks5,
@@ -99,7 +99,7 @@ pub enum ProxyMode {
     Custom(String),
 }
 
-/// 自动探测时依次尝试的本机端口（mihomo/Clash 7890、7897，SS 1080，v2rayN 10809）。
+/// 自动探测时依次尝试的本机端口（常见代理软件默认端口：7890、7897、1080、10809）。
 pub const PROBE_PORTS: [u16; 4] = [7890, 7897, 1080, 10809];
 
 /// 单个端口的 TCP 探测超时。

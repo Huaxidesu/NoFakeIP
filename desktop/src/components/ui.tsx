@@ -296,7 +296,7 @@ interface ToastItem {
 const ToastCtx = createContext<(text: string, kind?: ToastKind) => void>(() => {});
 
 /**
- * 模块级 toast 出口，给**非 React 代码**用（例如 `tasks.ts` 里的长任务）。
+ * 模块级 toast 出口，给非 React 代码用（例如 `tasks.ts` 里的长任务）。
  *
  * 为什么需要：长任务在页面被卸载后仍会跑完，此时不能依赖页面里的 `useToast()`
  * 去弹提示；这里由 `ToastProvider` 注册一个全局出口，任务结束时无论用户

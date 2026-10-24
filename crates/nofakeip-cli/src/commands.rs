@@ -688,7 +688,7 @@ fn cmd_data(cli: &Cli, out: &Out, dir: &Path, action: &DataAction) -> Result<u8>
                 "开始更新指定数据源…"
             });
 
-            // 数据下载走出站代理（--proxy / 自动探测），照顾 mihomo 等无系统代理用户
+            // 数据下载走出站代理（--proxy / 自动探测），照顾无系统代理的用户
             let updater = updater.with_proxy(cli_proxy(cli)?);
             let reports = run_blocking(async {
                 if use_all {

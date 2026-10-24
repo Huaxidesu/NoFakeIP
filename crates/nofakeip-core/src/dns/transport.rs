@@ -1,6 +1,6 @@
 //! DNS 四种传输实现：UDP / TCP / DoT / DoH。
 //!
-//! **核心要求（任务书第 3 节）**：禁止用 ping 代表 DNS 性能。
+//! 核心要求：禁止用 ping 代表 DNS 性能。
 //! DoH 必须完整走 `TCP Connect → TLS Handshake → HTTPS Request → DNS Response`，
 //! 并分段记录 `connect_time / tls_time / query_time / total_time`。
 //!
@@ -524,7 +524,7 @@ pub async fn resolve_doh_addr(ep: &DohEndpoint, server: &DnsServer) -> Result<So
         .ok_or_else(|| CoreError::Network(format!("{} 无可用地址", ep.host)))
 }
 
-/// 候选连接地址（最多 3 个）：**先 bootstrap_ip，再系统解析**。
+/// 候选连接地址（最多 3 个）：先 bootstrap_ip，再系统解析。
 ///
 /// 为什么要回退：部分节点的 `bootstrap_ip` 只用于解析、并不提供 HTTPS/DoT 服务
 /// （实测 `doh.pub` + `119.29.29.29` 会 TLS 失败），因此失败后必须能换地址重试。

@@ -40,7 +40,7 @@ impl Default for Settings {
                 .iter()
                 .map(|s| s.to_string())
                 .collect(),
-            // 默认自动探测（环境变量 → 本机常见代理端口），照顾 mihomo 等裸内核用户
+            // 默认自动探测（环境变量 → 本机常见代理端口），照顾裸内核代理软件用户
             proxy_mode: "auto".to_string(),
             proxy_url: String::new(),
         }

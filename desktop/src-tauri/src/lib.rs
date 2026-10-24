@@ -1,9 +1,9 @@
 //! NoFakeIP 桌面 / Android 客户端（Tauri 2）。
 //!
-//! 分层约定（见 `doc/01-系统架构.md`）：本 crate **只做 IPC 适配与状态管理**，
+//! 分层约定（见 `doc/01-系统架构.md`）：本 crate 只做 IPC 适配与状态管理，
 //! 全部业务逻辑在 `nofakeip-core` 中实现。
 //!
-//! **范围说明**：不生成、不修改任何 Clash / OpenClash / Clash Verge 配置。
+//! 范围说明：不生成、不修改任何代理软件配置。
 
 mod commands;
 mod state;
@@ -15,7 +15,7 @@ use nofakeip_core::storage::Storage;
 use tauri::Manager;
 
 // 注意：`#[tauri::command]` 生成的 `__cmd__*` 宏是 `#[macro_export]` 的（位于 crate 根），
-// 因此 `generate_handler!` 里必须用**非限定名**，不能用 `commands::foo`。
+// 因此 `generate_handler!` 里必须用非限定名，不能用 `commands::foo`。
 // 这里显式 import 一次，既满足宏解析，也让调用点更简洁。
 use commands::{
     add_server, classify_domain, delete_server, detect_domain, export_servers, generate_report,

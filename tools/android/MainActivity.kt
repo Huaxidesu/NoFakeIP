@@ -10,10 +10,10 @@ import androidx.core.view.WindowInsetsCompat
  * ⚠️ 环境适配补丁 E15（见 doc/11-构建发布与Android.md 第 2.9 节）
  *
  * 这个文件由 tools/build-android.sh 从 tools/android/MainActivity.kt 覆盖写入，
- * 重新执行 `tauri android init` 后会自动重新应用 —— **不要直接改 gen/ 下的副本**。
+ * 重新执行 `tauri android init` 后会自动重新应用 —— 不要直接改 gen/ 下的副本。
  *
  * 背景：
- *   Android 15（API 35）起，targetSdk >= 35 的应用被**强制** edge-to-edge，
+ *   Android 15（API 35）起，targetSdk >= 35 的应用被强制 edge-to-edge，
  *   无法再通过主题关掉。本项目 targetSdk = 36，窗口默认延伸到状态栏、
  *   手势导航条与刘海区域下方，前端内容会被系统栏压住。
  *
@@ -28,7 +28,7 @@ class MainActivity : TauriActivity() {
     super.onCreate(savedInstanceState)
 
     // android.R.id.content 是承载 WebView 的根容器。
-    // decorView 一定存在，所以用它兜底，避免个别机型上 content 还没建立。
+    // decorView 一定存在，用它作为后备，避免个别机型上 content 尚未建立。
     val root: View = window.decorView.findViewById(android.R.id.content) ?: window.decorView
 
     ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->

@@ -1,9 +1,9 @@
 //! SQLite 持久化。
 //!
 //! 表结构与迁移策略见 `doc/03-数据模型与存储.md`。
-//! 迁移原则：**只增不改**（加列用 `ALTER TABLE ADD COLUMN`），保证老库可平滑升级。
+//! 迁移原则：只增不改（加列用 `ALTER TABLE ADD COLUMN`），保证老库可平滑升级。
 //!
-//! **范围说明**：不存储任何 Clash / OpenClash 配置模板。
+//! 范围说明：不存储任何代理软件配置模板。
 
 use crate::benchmark::DomainBenchResult;
 use crate::error::{CoreError, Result};

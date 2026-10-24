@@ -1,5 +1,5 @@
 // 关于页：版本、简介与运行数据位置。
-// 说明：本页**不再**包含「不生成/不修改 Clash 配置」这类表述（需求方明确要求删除）。
+// 说明：本页不出现「不生成/不修改代理软件配置」这类表述（经用户确认删除）。
 
 import type { AppCtx } from "../App";
 import { Card, Stat } from "../components/ui";

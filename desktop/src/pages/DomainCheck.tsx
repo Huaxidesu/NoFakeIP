@@ -29,7 +29,7 @@ export default function DomainCheck({ ctx }: { ctx: AppCtx }) {
   // 输入框留空 → 检测 github.com；输入任意字符则完全覆盖（不做后缀拼接）
   const effectiveDomain = domain.trim() || "github.com";
 
-  // 在线归属地开启时展示出站代理状态（帮助 mihomo 等裸内核用户理解联网状态）
+  // 在线归属地开启时展示出站代理状态（帮助裸内核代理软件用户理解联网状态）
   const onlineGeo = ctx.settings?.online_geo ?? false;
   const [proxy, setProxy] = useState<ProxyStatus | null>(null);
   useEffect(() => {

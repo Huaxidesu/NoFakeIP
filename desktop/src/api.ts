@@ -1,5 +1,5 @@
 // 唯一的 IPC 出口：所有 Tauri command 调用都集中在这里。
-// 页面组件**不允许**直接 import @tauri-apps/api（见 doc/10-开发规范.md 第 3 节）。
+// 页面组件不允许直接 import @tauri-apps/api（见 doc/10-开发规范.md 第 3 节）。
 
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";

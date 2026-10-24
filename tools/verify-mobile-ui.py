@@ -148,7 +148,7 @@ def main():
     check("底栏每项触控宽度 ≥ 72px", all(x["w"] >= 72 for x in nav["visible"]), str([x["w"] for x in nav["visible"]]))
 
     print("\n=== 2. 导航图标风格 ===")
-    # 图标已于 2026-10-15 改为**内联 SVG**（components/icons.tsx）：
+    # 图标已于 2026-10-15 改为内联 SVG（components/icons.tsx）：
     # 此前用 ⚡(U+26A1) / ⚙(U+2699) 字符，属 emoji 码位，Android 上会渲染成
     # 彩色表情（补 U+FE0E 也压不住），且依赖系统字体覆盖。
     # 因此断言改为：每个可见导航项的图标必须是 <svg>，且不含任何文字字形内容。
@@ -274,7 +274,7 @@ def main():
     check("关于页显示应用图标", about["hasLogo"] is True)
     check("关于页已删除 Clash 说明文字", "Clash" not in about["text"])
 
-    # 全量扫描：推荐与报告页等其它页面也不应出现 Clash 字样
+    # 全量扫描：推荐与报告页等其它页面也不应出现被禁止的产品名字样
     js("""(async () => {
       const t = Array.from(document.querySelectorAll('.menu-item, .nav-item'));
       const report = t.find(e => ((e.querySelector('.menu-title, .nav-label, .nav-label-mobile')?.textContent) || '').includes('报告'));

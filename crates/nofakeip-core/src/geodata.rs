@@ -1,13 +1,13 @@
-//! 规则数据（域名 / IP 网段）的来源定义与**在线更新**。
+//! 规则数据（域名 / IP 网段）的来源定义与在线更新。
 //!
 //! 设计目标：
 //! 1. 内置一份可用数据（编译期嵌入，离线可用，见 [`crate::data`]）；
-//! 2. 支持用户随时从上游拉取最新数据，落到用户数据目录，运行时**优先加载用户数据**；
+//! 2. 支持用户随时从上游拉取最新数据，落到用户数据目录，运行时优先加载用户数据；
 //! 3. 每个数据源都配置多个候选地址（官方 + 国内可达镜像），逐个尝试，避免单一源不可达；
 //! 4. 更新采用「先写临时文件再原子改名」，中断不会损坏已有数据。
 //!
-//! **范围说明**：本模块只维护 NoFakeIP **自己使用**的数据（国内域名表、中国 IP 网段表、
-//! 国外域名表）。**不涉及任何代理软件的数据文件或配置生成。**
+//! 范围说明：本模块只维护 NoFakeIP 自己使用的数据（国内域名表、中国 IP 网段表、
+//! 国外域名表）。不涉及任何代理软件的数据文件或配置生成。
 
 use crate::data::BuiltinData;
 use crate::error::{CoreError, Result};
@@ -51,7 +51,7 @@ pub struct DataSource {
 /// 数据源清单。
 ///
 /// 每个源都带国内可达镜像（`ghproxy.net` / `jsDelivr`）。
-/// 若全部候选失败，返回错误并**保留本地已有文件**（不会清空）。
+/// 若全部候选失败，返回错误并保留本地已有文件（不会清空）。
 pub fn sources() -> Vec<DataSource> {
     const RAW_CHINA_DOMAINS: &str =
         "https://raw.githubusercontent.com/felixonmars/dnsmasq-china-list/master/accelerated-domains.china.conf";
