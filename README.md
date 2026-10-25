@@ -2,7 +2,7 @@
   <img src="assets/images/logo-render.png" width="120" alt="NoFakeIP">
   <h1>NoFakeIP</h1>
   <p>DNS 诊断与测速工具 —— 测出哪家 DNS 在国内快、哪家解析国外域名干净</p>
-  <p><b>支持电脑版（Windows / Linux）与手机版（Android），同一套功能，界面各自适配。</b></p>
+  <p><b>支持桌面版（Windows / Linux）与移动版（Android），同一套功能，界面各自适配。</b></p>
 </div>
 
 支持 UDP / TCP / DoT / DoH 四种传输，交叉比对多个节点对同一域名的解析结果，识别 DNS 污染与本地 Fake-IP 状态，并给出可读的诊断报告。
@@ -12,8 +12,8 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/电脑版-Windows_%7C_Linux-0078D6" alt="电脑版：Windows / Linux">
-  <img src="https://img.shields.io/badge/手机版-Android-3DDC84" alt="手机版：Android">
+  <img src="https://img.shields.io/badge/桌面版-Windows_%7C_Linux-0078D6" alt="桌面版：Windows / Linux">
+  <img src="https://img.shields.io/badge/移动版-Android-3DDC84" alt="移动版：Android">
 </p>
 
 <p align="center">
@@ -25,13 +25,13 @@
 
 ## 平台支持
 
-**电脑版与手机版功能一致**，都是完整的客户端，不是简化版或配套工具。两端共用同一套 Rust 测速引擎与前端代码，只是界面按屏幕宽度自适应：桌面端用侧栏 7 项直达，手机端用底栏 4 项 +「更多」页收纳。
+**桌面版与移动版功能一致**，都是完整的客户端，不是简化版或配套工具。两端共用同一套 Rust 测速引擎与前端代码，只是界面按屏幕宽度自适应：桌面端用侧栏 7 项直达，手机端用底栏 4 项 +「更多」页收纳。
 
 | 平台 | 版本 | 说明 |
 |---|---|---|
-| Windows 10 / 11 | 电脑版 | 提供安装包与便携版（免安装） |
-| Linux | 电脑版 | AppImage，添加执行权限后即可运行 |
-| Android 7.0+ | 手机版 | arm64 APK，直接安装 |
+| Windows 10 / 11 | 桌面版 | 提供安装包与便携版（免安装） |
+| Linux | 桌面版 | AppImage，添加执行权限后即可运行 |
+| Android 7.0+ | 移动版 | arm64 APK，直接安装 |
 
 > 竖屏手机与横屏电脑上的界面布局各不相同，但能做的操作完全一样。
 
@@ -62,9 +62,9 @@ NoFakeIP 的解决思路很明确：**让多个 DNS 节点同时解析同一个�
 </p>
 
 <p align="center">
-  <img src="assets/images/mobile-home.png" width="220" alt="手机版 · 首页">
+  <img src="assets/images/mobile-home.png" width="220" alt="移动版 · 首页">
   &nbsp;&nbsp;
-  <img src="assets/images/mobile-domain-check.png" width="220" alt="手机版 · 域名检测">
+  <img src="assets/images/mobile-domain-check.png" width="220" alt="移动版 · 域名检测">
 </p>
 
 ## 下载与安装
@@ -73,15 +73,15 @@ NoFakeIP 的解决思路很明确：**让多个 DNS 节点同时解析同一个�
 
 | 平台 | 版本 | 发行文件 | 安装方式 |
 |---|---|---|---|
-| Windows | 电脑版 | `NoFakeIP_<版本>_x64-setup.exe` | 运行安装程序，无需管理员权限 |
-| Windows | 电脑版 | `NoFakeIP_<版本>_windows-portable.exe` | 便携版，双击即用，无需安装 |
-| Android | 手机版 | `NoFakeIP_<版本>_arm64.apk` | 直接安装（需允许「安装未知来源应用」） |
-| Linux | 电脑版 | `NoFakeIP_<版本>_amd64.AppImage` | 添加执行权限后运行 |
+| Windows | 桌面版 | `NoFakeIP_<版本>_x64-setup.exe` | 运行安装程序，无需管理员权限 |
+| Windows | 桌面版 | `NoFakeIP_<版本>_windows-portable.exe` | 便携版，双击即用，无需安装 |
+| Android | 移动版 | `NoFakeIP_<版本>_arm64.apk` | 直接安装（需允许「安装未知来源应用」） |
+| Linux | 桌面版 | `NoFakeIP_<版本>_amd64.AppImage` | 添加执行权限后运行 |
 | Windows / Linux | CLI | `nofakeip-cli_<版本>_*.zip` / `.tar.gz` | 命令行版本，解压即用 |
 
 **系统要求**：Windows 10 / 11 x64 或受支持的 Linux 发行版；Android 7.0 及以上（arm64）。
 
-Windows 电脑版依赖系统自带的 WebView2 运行时（Win11 与较新的 Win10 已内置；若缺失，安装包会自动引导安装）。
+Windows 桌面版依赖系统自带的 WebView2 运行时（Win11 与较新的 Win10 已内置；若缺失，安装包会自动引导安装）。
 
 > **未做代码签名**：Windows SmartScreen 可能提示「未知发布者」，选择「仍要运行」即可；APK 使用自签名证书，仅供安装测试。
 
@@ -121,11 +121,11 @@ DNS 只是访问链路的一环。本工具测的是「解析这一步」的快�
 
 ## 技术栈
 
-项目分为 **Rust Core**（无 GUI 依赖的引擎与 CLI）与 **Tauri 2 + React 19** 的电脑版 / 手机版客户端，两者共用同一套前端。
+项目分为 **Rust Core**（无 GUI 依赖的引擎与 CLI）与 **Tauri 2 + React 19** 的桌面版 / 移动版客户端，两者共用同一套前端。
 
 - **Core**：DNS 协议实现（四传输）、测速引擎、分类与污染检测、推荐引擎、报告生成、SQLite 存储。
 - **CLI**：`scan` / `bench` / `classify` / `detect` / `report` / `data` / `dns` / `history` / `doctor` 九个子命令。
-- **GUI**：电脑版与手机版共用 7 个页面，深浅色主题，窄屏自适应（底栏 4 项 + 「更多」页）。
+- **GUI**：桌面版与移动版共用 7 个页面，深浅色主题，窄屏自适应（底栏 4 项 + 「更多」页）。
 
 从源码构建、项目结构、测试与技术实现参见 [开发指南](../../wiki/开发指南)。
 
